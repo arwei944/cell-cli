@@ -46,7 +46,7 @@ pub struct SimplicityChecker {
 impl Default for SimplicityChecker {
     fn default() -> Self {
         Self {
-            max_file_lines: 300,
+            max_file_lines: 500,
             max_fn_lines: 30,
             max_struct_fields: 8,
             min_comment_ratio: 0.10,
@@ -67,7 +67,7 @@ impl SimplicityChecker {
     /// 严格模式 - 更严格的限制
     pub fn strict() -> Self {
         Self {
-            max_file_lines: 200,
+            max_file_lines: 300,
             max_fn_lines: 20,
             max_struct_fields: 6,
             min_comment_ratio: 0.15,

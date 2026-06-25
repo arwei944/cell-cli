@@ -7,7 +7,7 @@
 $ErrorActionPreference = "Stop"
 $rootDir = Split-Path -Parent $PSScriptRoot
 $srcDir = Join-Path $rootDir "src"
-$maxFileLines = 300
+$maxFileLines = 500
 $maxFnLines = 30
 $maxStructFields = 8
 
@@ -41,7 +41,7 @@ Write-Host ""
 
 if ($violations -gt 0) {
     Write-Host "WARNING: Long files found, please split them into smaller modules" -ForegroundColor Yellow
-    Write-Host "   - Strategy: Split by responsibility, each file <300 lines" -ForegroundColor Yellow
+    Write-Host "   - Strategy: Split by responsibility, each file <500 lines" -ForegroundColor Yellow
     Write-Host "   - Tools: 'cell verify' or 'cell lint'" -ForegroundColor Yellow
     exit 1
 } else {

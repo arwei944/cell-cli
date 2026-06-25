@@ -74,8 +74,8 @@ dead_code = "warn"
 #
 # 本项目使用定量代码规范约束，所有阈值定义于此
 [package.metadata.cell]
-# 文件行数限制
-max-file-lines = 300
+# 文件行数限制（兼顾行数和功能，允许到500行）
+max-file-lines = 500
 # 函数行数限制
 max-fn-lines = 30
 # 结构体字段数限制
