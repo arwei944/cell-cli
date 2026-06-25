@@ -1,0 +1,84 @@
+[package]
+name = "cell-cli"
+version = "0.1.0"
+edition = "2024"
+description = "Cell Architecture CLI - AI-native low-entropy architecture toolchain"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/cell-architecture/cell-cli"
+readme = "README.md"
+
+[[bin]]
+name = "cell"
+path = "src/main.rs"
+
+[lib]
+name = "cell_core"
+path = "src/lib.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive", "cargo", "wrap_help"] }
+clap_complete = "4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+toml = "0.8"
+syn = { version = "2", features = ["full", "extra-traits", "visit"] }
+quote = "1"
+proc-macro2 = { version = "1", features = ["span-locations"] }
+anyhow = "1"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+walkdir = "2"
+indexmap = { version = "2", features = ["serde"] }
+petgraph = "0.6"
+num-traits = "0.2"
+axum = { version = "0.7", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors"] }
+webbrowser = "0.8"
+
+[dev-dependencies]
+tempfile = "3"
+assert_cmd = "2"
+predicates = "3"
+criterion = "0.5"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "warn"
+todo = "warn"
+unused_io_amount = "deny"
+too_many_lines = "warn"
+type_complexity = "warn"
+unused_self = "warn"
+panic = "warn"
+
+[lints.rust]
+unsafe_code = "warn"
+unused_imports = "deny"
+unused_variables = "deny"
+dead_code = "warn"
+
+# 代码质量强制规则
+# Code Quality Enforcement Rules
+#
+# 本项目使用定量代码规范约束，所有阈值定义于此
+[package.metadata.cell]
+# 文件行数限制
+max-file-lines = 300
+# 函数行数限制
+max-fn-lines = 30
+# 结构体字段数限制
+max-struct-fields = 8
+# 最小注释率
+min-comment-ratio = 0.10
