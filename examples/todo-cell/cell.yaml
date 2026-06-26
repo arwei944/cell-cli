@@ -1,0 +1,88 @@
+# Cell 项目示例 - Todo Service
+# 这是一个最小可运行的 Cell 项目示例
+
+name: todo-cell
+description: 待办事项服务示例
+version: 0.1.0
+cell_version: 0.8.0
+
+# 负责人
+owners:
+  - alice@example.com
+
+# 端口定义
+ports:
+  - name: http
+    port: 8080
+    protocol: tcp
+  - name: grpc
+    port: 9090
+    protocol: tcp
+
+# 适配器
+adapters:
+  - name: rest
+    type: http
+  - name: grpc
+    type: grpc
+
+# 依赖
+dependencies:
+  - todo-core
+  - user-auth
+
+# 标签
+tags:
+  - example
+  - todo
+  - crud
+
+# 架构配置
+architecture:
+  style: hexagonal
+  layers:
+    - domain
+    - application
+    - adapters
+    - interfaces
+
+# Lint 配置
+lint:
+  max_cyclomatic_complexity: 10
+  max_function_lines: 50
+  require_doc_comments: true
+
+# 熵值配置
+entropy:
+  weights:
+    structure: 0.2
+    complexity: 0.25
+    coupling: 0.2
+    naming: 0.2
+    testing: 0.15
+  thresholds:
+    notice: 30.0
+    warning: 50.0
+    critical: 70.0
+  ignore:
+    paths:
+      - "target/*"
+      - "examples/*"
+    patterns:
+      - "*.generated.rs"
+
+# 功能单元
+domain:
+  features:
+    - name: todo-crud
+      status: production
+      extension_points:
+        - name: validators
+          type: chain
+        - name: notifiers
+          type: broadcast
+    - name: todo-search
+      status: staging
+      extension_points:
+        - name: filters
+          type: chain

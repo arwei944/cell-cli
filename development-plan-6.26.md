@@ -2,7 +2,7 @@
 
 > 文档版本：v3.1
 > 更新日期：2026-06-26
-> 基线快照：Sprint1 完成 / 59 domain 模块 / 60 application service / 45 CLI 命令 / 编译通过
+> 基线快照：Sprint1 完成 / Sprint2 完成 / Sprint3 完成 / 59 domain 模块 / 65 application service / 45 CLI 命令 / 编译通过
 > 依据：全面审计报告 + [development-plan.md](development-plan.md)
 
 ---
@@ -21,13 +21,23 @@
 | 编译状态 | ✅ 通过 | `cargo build --release` 无错误 |
 | Clippy 状态 | ⚠️ 有警告 | 少量 dead_code 警告 |
 
-### 1.2 Sprint1 完成情况
+### 1.2 Sprint 完成情况
 
-| 类别 | 任务数 | 完成状态 |
-|------|--------|----------|
-| PHASE3 Application+CLI 集成 | 11 | ✅ 全部完成（L1 编译通过） |
-| PHASE1 收尾 | 4 | ⏳ 待 Sprint2 |
-| PHASE2 CLI 命令补全 | 8 | ⏳ 待 Sprint2 |
+| Sprint | 任务数 | 完成状态 |
+|--------|--------|----------|
+| Sprint1 | 11 | ✅ 全部完成（L1 编译通过） |
+| Sprint2 | 11 | ✅ 全部完成（L1 编译通过） |
+| Sprint3 | 6 | ✅ 全部完成（L1 编译通过） |
+
+### 1.3 模块统计（Sprint3 后）
+
+| 维度 | 数量 | 说明 |
+|------|------|------|
+| Domain 模块 | 35+ | 新增 mount_manager, config_schema, entropy_config 等 |
+| Application Service | 65+ | 新增 auto_instrumentation, mount_service, feature_service, saga_service 等 |
+| CLI 命令 | 50+ | 新增 saga, contract, bank, quota, entropy config 等 |
+| 文档 | 5 | README.md, CHANGELOG.md, CLI_REFERENCE.md, ARCHITECTURE.md, development-plan.md |
+| 单元测试 | 750+ | 编译通过，待运行测试验证 |
 | PHASE4 | 14 | ⏳ 待规划 |
 
 ---

@@ -61,6 +61,10 @@ fn dispatch(cli: Cli) -> CellResult<()> {
         Command::Rca(args) => rca_cmd::cmd_rca(args),
         Command::Rule(args) => rule_cmd::cmd_rule(args),
         Command::Refactor(args) => refactor_cmd::cmd_refactor(args),
+        Command::Saga(args) => saga_cmd::cmd_saga(args),
+        Command::Contract(args) => contract_cmd::cmd_contract(args),
+        Command::EntropyBank(args) => entropy_bank_cmd::cmd_entropy_bank(args),
+        Command::ComplexityQuota(args) => complexity_quota_cmd::cmd_complexity_quota(args),
     }
 }
 

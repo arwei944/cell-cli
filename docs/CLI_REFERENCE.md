@@ -25,6 +25,10 @@
 - [🤖 智能体开发工作流](#智能体开发工作流)
 - [✅ 验证与门禁](#验证与门禁)
 - [🧩 功能与模板](#功能与模板)
+- [🔄 Saga 编排](#saga-编排)
+- [📄 契约测试](#契约测试)
+- [🏦 熵值银行](#熵值银行)
+- [📊 复杂度配额](#复杂度配额)
 - [📋 决策与审计](#决策与审计)
 - [🧪 测试与基准](#测试与基准)
 - [🗃️ 项目与环境](#项目与环境)
@@ -182,6 +186,26 @@ cell entropy <SUBCOMMAND>
 | `baseline` | 熵值基线管理 |
 | `compare` | 两次熵值对比 |
 | `detail` | 详细熵值分析 |
+| `config` | 熵值配置管理 |
+
+#### entropy config
+
+管理熵值配置文件 `entropy.yaml`。
+
+```bash
+cell entropy config <SUBCOMMAND>
+```
+
+| 子命令 | 说明 |
+|--------|------|
+| `init` | 生成默认 entropy.yaml |
+| `show` | 显示当前配置 |
+
+**示例:**
+```bash
+cell entropy config init
+cell entropy config show
+```
 
 #### entropy current
 
@@ -1161,6 +1185,138 @@ cell git log
 cell git diff
 cell git hooks status
 cell git blame src/main.rs
+```
+
+---
+
+## 🔄 Saga 编排
+
+### saga - Saga 编排
+
+Saga 分布式事务编排。
+
+```bash
+cell saga <SUBCOMMAND>
+```
+
+**别名:** `saga`
+
+**子命令:**
+
+| 子命令 | 说明 |
+|--------|------|
+| `create <name>` | 创建 Saga |
+| `list` | Saga 列表 |
+
+**示例:**
+```bash
+cell saga create order-payment
+cell saga list
+```
+
+---
+
+## 📄 契约测试
+
+### contract - 契约测试
+
+服务间契约测试管理。
+
+```bash
+cell contract <SUBCOMMAND>
+```
+
+**别名:** `contract`
+
+**子命令:**
+
+| 子命令 | 说明 |
+|--------|------|
+| `create <id> <provider> <consumer> <port>` | 创建契约 |
+| `list` | 契约列表 |
+
+**示例:**
+```bash
+cell contract create user-api service-a service-b 8080
+cell contract list
+```
+
+---
+
+## 🏦 熵值银行
+
+### bank - 熵值银行
+
+熵值余额管理与交易。
+
+```bash
+cell bank <SUBCOMMAND>
+```
+
+**别名:** `bank`
+
+**子命令:**
+
+| 子命令 | 说明 |
+|--------|------|
+| `balance <owner>` | 查询余额 |
+| `deposit <owner> <amount> <reason>` | 存入熵值 |
+| `withdraw <owner> <amount> <reason>` | 支取熵值 |
+
+**示例:**
+```bash
+cell bank balance alice
+cell bank deposit alice 10.0 "重构奖励"
+cell bank withdraw bob 5.0 "功能开发"
+```
+
+---
+
+## 📊 复杂度配额
+
+### quota - 复杂度配额
+
+复杂度配额管理与检查。
+
+```bash
+cell quota <SUBCOMMAND>
+```
+
+**别名:** `quota`
+
+**子命令:**
+
+| 子命令 | 说明 |
+|--------|------|
+| `status <name>` | 配额状态 |
+| `check <name> <required>` | 检查配额 |
+
+**示例:**
+```bash
+cell quota status auth-service
+cell quota check payment-service 15.0
+```
+
+---
+
+## ⚙️ 配置验证
+
+### config validate - 配置验证
+
+验证 `cell.yaml` 配置文件的 Schema 合规性。
+
+```bash
+cell config validate
+```
+
+**选项:**
+- `--path <PATH>` - 配置文件路径（默认 `./cell.yaml`）
+- `--json` - JSON 格式输出
+
+**示例:**
+```bash
+cell config validate
+cell config validate --path ./config/cell.yaml
 ```
 
 ---

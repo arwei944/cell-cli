@@ -183,6 +183,22 @@ pub enum Command {
     #[command(visible_aliases = ["devtools"])]
     Tools(ToolsArgs),
 
+    #[command(about = "Saga orchestration and compensation")]
+    #[command(visible_aliases = ["saga"])]
+    Saga(SagaArgs),
+
+    #[command(about = "Contract testing and validation")]
+    #[command(visible_aliases = ["contract"])]
+    Contract(ContractArgs),
+
+    #[command(about = "Entropy bank - balance and transactions")]
+    #[command(visible_aliases = ["bank"])]
+    EntropyBank(EntropyBankArgs),
+
+    #[command(about = "Complexity quota management")]
+    #[command(visible_aliases = ["quota"])]
+    ComplexityQuota(ComplexityQuotaArgs),
+
     #[command(about = "Generate shell completions")]
     Completions(CompletionsArgs),
 
@@ -440,6 +456,22 @@ pub enum EntropySub {
     },
     #[command(about = "Show entropy trend")]
     Trend {},
+    #[command(about = "Manage entropy configuration")]
+    Config {
+        #[command(subcommand)]
+        sub: EntropyConfigSub,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum EntropyConfigSub {
+    #[command(about = "Initialize entropy.yaml with defaults")]
+    Init {
+        #[arg(short, long, help = "Force overwrite existing config")]
+        force: bool,
+    },
+    #[command(about = "Show current entropy configuration")]
+    Show {},
 }
 
 #[derive(Debug, clap::Args)]
@@ -1070,6 +1102,101 @@ pub enum ToolsSub {
     Status {
         #[arg(short, long, help = "Path to project")]
         path: Option<String>,
+    },
+}
+
+#[derive(Debug, clap::Args)]
+pub struct SagaArgs {
+    #[command(subcommand)]
+    pub sub: SagaSub,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SagaSub {
+    #[command(about = "Create a new saga")]
+    Create {
+        #[arg(help = "Saga name")]
+        name: String,
+    },
+    #[command(about = "List all sagas")]
+    List {},
+}
+
+#[derive(Debug, clap::Args)]
+pub struct ContractArgs {
+    #[command(subcommand)]
+    pub sub: ContractSub,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ContractSub {
+    #[command(about = "Create a new contract")]
+    Create {
+        #[arg(help = "Contract ID")]
+        id: String,
+        #[arg(help = "Provider")]
+        provider: String,
+        #[arg(help = "Consumer")]
+        consumer: String,
+        #[arg(help = "Port")]
+        port: String,
+    },
+    #[command(about = "List all contracts")]
+    List {},
+}
+
+#[derive(Debug, clap::Args)]
+pub struct EntropyBankArgs {
+    #[command(subcommand)]
+    pub sub: EntropyBankSub,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum EntropyBankSub {
+    #[command(about = "Show account balance")]
+    Balance {
+        #[arg(help = "Owner")]
+        owner: String,
+    },
+    #[command(about = "Deposit entropy")]
+    Deposit {
+        #[arg(help = "Owner")]
+        owner: String,
+        #[arg(help = "Amount")]
+        amount: f64,
+        #[arg(help = "Reason")]
+        reason: String,
+    },
+    #[command(about = "Withdraw entropy")]
+    Withdraw {
+        #[arg(help = "Owner")]
+        owner: String,
+        #[arg(help = "Amount")]
+        amount: f64,
+        #[arg(help = "Reason")]
+        reason: String,
+    },
+}
+
+#[derive(Debug, clap::Args)]
+pub struct ComplexityQuotaArgs {
+    #[command(subcommand)]
+    pub sub: ComplexityQuotaSub,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ComplexityQuotaSub {
+    #[command(about = "Show quota status")]
+    Status {
+        #[arg(help = "Quota name")]
+        name: String,
+    },
+    #[command(about = "Check quota")]
+    Check {
+        #[arg(help = "Quota name")]
+        name: String,
+        #[arg(help = "Required complexity")]
+        required: f64,
     },
 }
 

@@ -223,9 +223,9 @@ cell self-review
 
 ## 版本信息
 
-- **当前版本**: v1.0 (白皮书完整版)
-- **最后更新**: 2026-06-25
-- **文档总章节**: 15 章
+- **当前版本**: v0.8.0 (Sprint2 完成)
+- **最后更新**: 2026-06-26
+- **Sprint 进度**: Sprint1 ✅ | Sprint2 ✅ | Sprint3 🔄
 - **核心创新点**: 13 个
 
 ## 许可
@@ -256,8 +256,11 @@ cell self-review
 | `cell entropy current` | 当前熵值 | [CLI 参考](docs/CLI_REFERENCE.md#entropy) |
 | `cell entropy trend` | 熵值趋势 | [CLI 参考](docs/CLI_REFERENCE.md#entropy) |
 | `cell entropy baseline` | 熵值基线管理 | [CLI 参考](docs/CLI_REFERENCE.md#entropy) |
+| `cell entropy config init` | 初始化熵值配置 | [CLI 参考](docs/CLI_REFERENCE.md#entropy) |
+| `cell entropy config show` | 显示熵值配置 | [CLI 参考](docs/CLI_REFERENCE.md#entropy) |
 | `cell lint` | 代码简洁度检查 | [CLI 参考](docs/CLI_REFERENCE.md#lint) |
 | `cell review` | 代码审查 | [CLI 参考](docs/CLI_REFERENCE.md#review) |
+| `cell config validate` | 配置 Schema 验证 | [CLI 参考](docs/CLI_REFERENCE.md#config) |
 
 ### 🤖 智能体开发工作流
 
@@ -292,6 +295,16 @@ cell self-review
 | `cell feature new` | 新建功能单元 | [CLI 参考](docs/CLI_REFERENCE.md#feature) |
 | `cell feature mount` | 挂载功能单元 | [CLI 参考](docs/CLI_REFERENCE.md#feature) |
 | `cell feature unmount` | 卸载功能单元 | [CLI 参考](docs/CLI_REFERENCE.md#feature) |
+| `cell feature impact` | 影响分析 | [CLI 参考](docs/CLI_REFERENCE.md#feature) |
+| `cell saga create` | 创建 Saga | [CLI 参考](docs/CLI_REFERENCE.md#saga) |
+| `cell saga list` | Saga 列表 | [CLI 参考](docs/CLI_REFERENCE.md#saga) |
+| `cell contract create` | 创建契约 | [CLI 参考](docs/CLI_REFERENCE.md#contract) |
+| `cell contract list` | 契约列表 | [CLI 参考](docs/CLI_REFERENCE.md#contract) |
+| `cell bank balance` | 熵值余额 | [CLI 参考](docs/CLI_REFERENCE.md#bank) |
+| `cell bank deposit` | 存入熵值 | [CLI 参考](docs/CLI_REFERENCE.md#bank) |
+| `cell bank withdraw` | 支取熵值 | [CLI 参考](docs/CLI_REFERENCE.md#bank) |
+| `cell quota status` | 配额状态 | [CLI 参考](docs/CLI_REFERENCE.md#quota) |
+| `cell quota check` | 检查配额 | [CLI 参考](docs/CLI_REFERENCE.md#quota) |
 | `cell template list` | 模板列表 | [CLI 参考](docs/CLI_REFERENCE.md#template) |
 | `cell template apply` | 应用模板 | [CLI 参考](docs/CLI_REFERENCE.md#template) |
 | `cell template categories` | 模板分类 | [CLI 参考](docs/CLI_REFERENCE.md#template) |
