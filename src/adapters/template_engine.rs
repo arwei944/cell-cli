@@ -281,6 +281,7 @@ mod tests {
             }],
             dependencies: vec![],
             tags: vec![],
+            ..Default::default()
         }
     }
 

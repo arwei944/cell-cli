@@ -1,0 +1,32 @@
+# Rust build artifacts
+/target/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cell runtime data
+.cell/
+.cell-local/
+
+# Temporary scripts and files
+temp_*/
+temp/
+*.ps1
+*.py
+test_*.txt
+test_*.json
+
+# Logs
+*.log
+logs/
+
+# Backup
+*.bak
+*.backup

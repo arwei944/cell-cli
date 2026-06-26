@@ -93,6 +93,18 @@ impl DecisionStatus {
     }
 }
 
+impl std::fmt::Display for DecisionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DecisionStatus::Proposed => write!(f, "Proposed"),
+            DecisionStatus::Accepted => write!(f, "Accepted"),
+            DecisionStatus::Rejected => write!(f, "Rejected"),
+            DecisionStatus::Deprecated => write!(f, "Deprecated"),
+            DecisionStatus::Superseded => write!(f, "Superseded"),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Alternative {
     pub name: String,

@@ -4,6 +4,7 @@ use crate::domain::progress::ProgressLog;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+#[derive(Clone)]
 pub struct FileProgressStore;
 
 impl FileProgressStore {

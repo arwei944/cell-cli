@@ -1,7 +1,27 @@
+use crate::application::entropy_service;
 use crate::domain::errors::CellResult;
 use std::path::Path;
 use std::process::Command;
 use std::time::Instant;
+
+fn find_cargo() -> String {
+    if let Ok(path) = std::env::var("CARGO") {
+        return path;
+    }
+    if let Ok(home) = std::env::var("USERPROFILE") {
+        let candidate = format!("{}\\.cargo\\bin\\cargo.exe", home);
+        if std::path::Path::new(&candidate).exists() {
+            return candidate;
+        }
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        let candidate = format!("{}/.cargo/bin/cargo", home);
+        if std::path::Path::new(&candidate).exists() {
+            return candidate;
+        }
+    }
+    "cargo".to_string()
+}
 
 pub struct FastVerifyService;
 
@@ -63,7 +83,7 @@ impl FastVerifyService {
     }
 
     pub fn check_entropy_gate(&self, project_path: &str, threshold: f64) -> CellResult<()> {
-        let check = self.run_entropy_check(project_path)?;
+        let check = self.run_entropy_check(project_path, threshold)?;
         if check.passed {
             Ok(())
         } else {
@@ -97,7 +117,7 @@ impl FastVerifyService {
 
         checks.push(self.run_cargo_check(project_path)?);
         checks.push(self.run_all_tests(project_path)?);
-        checks.push(self.run_entropy_check(project_path)?);
+        checks.push(self.run_entropy_check(project_path, 60.0)?);
         checks.push(self.check_architecture_rules(project_path)?);
 
         let all_passed = checks.iter().all(|c| c.passed);
@@ -112,7 +132,8 @@ impl FastVerifyService {
 
     fn run_cargo_check(&self, project_path: &str) -> CellResult<VerifyCheck> {
         let start = Instant::now();
-        let output = Command::new("cargo")
+        let cargo = find_cargo();
+        let output = Command::new(&cargo)
             .arg("check")
             .current_dir(project_path)
             .output()
@@ -136,7 +157,8 @@ impl FastVerifyService {
 
     fn run_fast_tests(&self, project_path: &str) -> CellResult<VerifyCheck> {
         let start = Instant::now();
-        let output = Command::new("cargo")
+        let cargo = find_cargo();
+        let output = Command::new(&cargo)
             .args(["test", "--lib", "--", "--test-threads=4"])
             .current_dir(project_path)
             .output()
@@ -162,7 +184,8 @@ impl FastVerifyService {
 
     fn run_all_tests(&self, project_path: &str) -> CellResult<VerifyCheck> {
         let start = Instant::now();
-        let output = Command::new("cargo")
+        let cargo = find_cargo();
+        let output = Command::new(&cargo)
             .args(["test", "--", "--test-threads=4"])
             .current_dir(project_path)
             .output()
@@ -251,29 +274,41 @@ impl FastVerifyService {
         })
     }
 
-    fn run_entropy_check(&self, project_path: &str) -> CellResult<VerifyCheck> {
+    fn run_entropy_check(&self, project_path: &str, threshold: f64) -> CellResult<VerifyCheck> {
         let start = Instant::now();
 
-        let output = Command::new("cargo")
-            .args(["run", "--", "entropy", "--threshold", "80"])
-            .current_dir(project_path)
-            .output()
-            .map_err(|e| crate::domain::errors::CellError::Other(format!("熵值检查失败: {}", e)))?;
+        let result = entropy_service::run_entropy_check(project_path);
 
         let duration = start.elapsed().as_millis() as u64;
-        let passed = output.status.success();
-        let details = if passed {
-            None
-        } else {
-            Some(String::from_utf8_lossy(&output.stderr).to_string())
-        };
 
-        Ok(VerifyCheck {
-            name: "架构熵值门禁".to_string(),
-            passed,
-            duration_ms: duration,
-            details,
-        })
+        match result {
+            Ok(report) => {
+                let passed = report.overall_score < threshold;
+                let details = if passed {
+                    None
+                } else {
+                    Some(format!(
+                        "熵值 {} 超过阈值 {} (等级: {})",
+                        report.overall_score,
+                        threshold,
+                        report.grade.label()
+                    ))
+                };
+
+                Ok(VerifyCheck {
+                    name: "架构熵值门禁".to_string(),
+                    passed,
+                    duration_ms: duration,
+                    details,
+                })
+            }
+            Err(e) => Ok(VerifyCheck {
+                name: "架构熵值门禁".to_string(),
+                passed: false,
+                duration_ms: duration,
+                details: Some(format!("熵值检查失败: {}", e)),
+            }),
+        }
     }
 
     pub fn format_result(&self, result: &VerifyResult) -> String {

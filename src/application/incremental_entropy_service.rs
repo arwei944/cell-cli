@@ -1,5 +1,7 @@
+use crate::application::entropy_service;
 use crate::domain::entropy::{build_file_metrics, calculate_overall_score, DimensionWeights, EntropyDimensions, EntropyGrade, EntropyReport, FileEntropy};
 use crate::domain::errors::CellResult;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Command;
@@ -130,20 +132,29 @@ impl IncrementalEntropyService {
         };
 
         let (report, overall_change, high_risk_changes) = if is_incremental && !all_files.is_empty() {
-            let mut file_entropies: Vec<FileEntropy> = Vec::new();
+            let mut file_entropies: Vec<FileEntropy> = Vec::with_capacity(all_files.len());
             let mut total_lines = 0;
             let mut structural_sum = 0.0;
             let mut complexity_sum = 0.0;
+            let mut naming_sum = 0.0;
 
-            for file in &all_files {
-                let file_path = Path::new(project_path).join(file);
-                if let Ok(content) = std::fs::read_to_string(&file_path) {
-                    let (file_entropy, _, _, _) = build_file_metrics(file, &content);
-                    structural_sum += file_entropy.structural_score;
-                    complexity_sum += file_entropy.complexity_score;
-                    total_lines += file_entropy.lines;
-                    file_entropies.push(file_entropy);
-                }
+            let results: Vec<_> = all_files
+                .par_iter()
+                .filter_map(|file| {
+                    let file_path = Path::new(project_path).join(file);
+                    std::fs::read_to_string(&file_path).ok().map(|content| {
+                        let (file_entropy, _, _, _) = build_file_metrics(file, &content);
+                        (file_entropy, content)
+                    })
+                })
+                .collect();
+
+            for (file_entropy, _content) in results {
+                structural_sum += file_entropy.structural_score;
+                complexity_sum += file_entropy.complexity_score;
+                naming_sum += file_entropy.naming_score;
+                total_lines += file_entropy.lines;
+                file_entropies.push(file_entropy);
             }
 
             let file_count = file_entropies.len();
@@ -152,7 +163,7 @@ impl IncrementalEntropyService {
                     structural: structural_sum / file_count as f64,
                     complexity: complexity_sum / file_count as f64,
                     coupling: 0.0,
-                    naming: 0.0,
+                    naming: naming_sum / file_count as f64,
                     test: 0.0,
                 }
             } else {
@@ -190,7 +201,7 @@ impl IncrementalEntropyService {
 
             (report, change, high_risk)
         } else {
-            let full_report = crate::application::entropy_service::run_entropy_check(project_path)?;
+            let full_report = entropy_service::run_entropy_check(project_path)?;
             (full_report, 0.0, Vec::new())
         };
 
@@ -375,7 +386,7 @@ impl IncrementalEntropyService {
         std::fs::create_dir_all(&cache_dir)?;
 
         let cache_file = cache_dir.join("entropy_cache.json");
-        let content = serde_json::to_string_pretty(cache)?;
+        let content = serde_json::to_string(cache)?;
         std::fs::write(cache_file, content)?;
 
         Ok(())

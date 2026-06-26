@@ -34,3 +34,26 @@ pub enum CellError {
     #[error("{0}")]
     Other(String),
 }
+
+impl From<crate::domain::plugin_system::PluginError> for CellError {
+    fn from(e: crate::domain::plugin_system::PluginError) -> Self {
+        CellError::Other(e.to_string())
+    }
+}
+
+impl From<crate::domain::rule_engine::RuleEngineError> for CellError {
+    fn from(e: crate::domain::rule_engine::RuleEngineError) -> Self {
+        use crate::domain::rule_engine::RuleEngineError::*;
+        match e {
+            RuleNotFound(msg) => CellError::NotFound(msg),
+            RuleSetNotFound(msg) => CellError::NotFound(msg),
+            VersionNotFound(msg) => CellError::NotFound(msg),
+            DependencyNotFound(msg) => CellError::NotFound(msg),
+            RuleAlreadyExists(msg) => CellError::AlreadyExists(msg),
+            RuleSetAlreadyExists(msg) => CellError::AlreadyExists(msg),
+            InvalidStatusTransition(msg) => CellError::Validation(msg),
+            CircularDependency(msg) => CellError::Validation(msg),
+            EvaluationFailed(msg) => CellError::Other(msg),
+        }
+    }
+}

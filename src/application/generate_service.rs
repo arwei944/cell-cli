@@ -4,13 +4,37 @@ use crate::domain::errors::{CellError, CellResult};
 use std::fs;
 use std::path::Path;
 
+#[derive(Debug, Clone)]
+pub struct GenerateOptions {
+    pub telemetry: bool,
+    pub cell_name: Option<String>,
+}
+
+impl Default for GenerateOptions {
+    fn default() -> Self {
+        Self {
+            telemetry: true,
+            cell_name: None,
+        }
+    }
+}
+
 pub struct GenerateService<T: CodeGeneratorPort> {
     code_generator: T,
+    options: GenerateOptions,
 }
 
 impl<T: CodeGeneratorPort> GenerateService<T> {
     pub fn new(code_generator: T) -> Self {
-        Self { code_generator }
+        Self { 
+            code_generator,
+            options: GenerateOptions::default(),
+        }
+    }
+
+    pub fn with_options(mut self, options: GenerateOptions) -> Self {
+        self.options = options;
+        self
     }
 
     pub fn generate_cell_from_spec(&self, spec_path: &str, output: &str, force: bool) -> CellResult<Vec<String>> {
@@ -87,7 +111,7 @@ impl<T: CodeGeneratorPort> GenerateService<T> {
     ) -> CellResult<String> {
         let adapter_name = to_snake_case(name);
         let file_path = Path::new(output).join(format!("src/adapters/{}.rs", adapter_name));
-        let content = render_adapter_struct(name, kind, port);
+        let content = render_adapter_struct(name, kind, port, self.options.telemetry);
 
         if let Some(parent) = file_path.parent() {
             fs::create_dir_all(parent)?;
@@ -124,6 +148,161 @@ impl<T: CodeGeneratorPort> GenerateService<T> {
         }
         Ok(())
     }
+
+    pub fn generate_entity(
+        &self,
+        name: &str,
+        fields: Option<&str>,
+        output: &str,
+    ) -> CellResult<String> {
+        let file_name = to_snake_case(name);
+        let file_path = Path::new(output).join(format!("src/domain/entities/{}.rs", file_name));
+        let content = render_entity(name, fields);
+
+        if let Some(parent) = file_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&file_path, &content)?;
+
+        Ok(file_path.to_string_lossy().to_string())
+    }
+
+    pub fn generate_value_object(
+        &self,
+        name: &str,
+        fields: Option<&str>,
+        output: &str,
+    ) -> CellResult<String> {
+        let file_name = to_snake_case(name);
+        let file_path = Path::new(output).join(format!("src/domain/value_objects/{}.rs", file_name));
+        let content = render_value_object(name, fields);
+
+        if let Some(parent) = file_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&file_path, &content)?;
+
+        Ok(file_path.to_string_lossy().to_string())
+    }
+
+    pub fn generate_aggregate(
+        &self,
+        name: &str,
+        output: &str,
+    ) -> CellResult<String> {
+        let file_name = to_snake_case(name);
+        let file_path = Path::new(output).join(format!("src/domain/aggregates/{}.rs", file_name));
+        let content = render_aggregate(name);
+
+        if let Some(parent) = file_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&file_path, &content)?;
+
+        Ok(file_path.to_string_lossy().to_string())
+    }
+
+    pub fn generate_domain_event(
+        &self,
+        name: &str,
+        fields: Option<&str>,
+        output: &str,
+    ) -> CellResult<String> {
+        let file_name = to_snake_case(name);
+        let file_path = Path::new(output).join(format!("src/domain/events/{}.rs", file_name));
+        let content = render_domain_event(name, fields);
+
+        if let Some(parent) = file_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&file_path, &content)?;
+
+        Ok(file_path.to_string_lossy().to_string())
+    }
+
+    pub fn generate_domain_service(
+        &self,
+        name: &str,
+        output: &str,
+    ) -> CellResult<String> {
+        let file_name = to_snake_case(name);
+        let file_path = Path::new(output).join(format!("src/domain/services/{}.rs", file_name));
+        let content = render_domain_service(name);
+
+        if let Some(parent) = file_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&file_path, &content)?;
+
+        Ok(file_path.to_string_lossy().to_string())
+    }
+
+    pub fn generate_repository(
+        &self,
+        name: &str,
+        entity: &str,
+        output: &str,
+    ) -> CellResult<String> {
+        let file_name = to_snake_case(name);
+        let file_path = Path::new(output).join(format!("src/application/ports/repositories/{}.rs", file_name));
+        let content = render_repository(name, entity);
+
+        if let Some(parent) = file_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&file_path, &content)?;
+
+        Ok(file_path.to_string_lossy().to_string())
+    }
+
+    pub fn generate_usecase(
+        &self,
+        name: &str,
+        input: Option<&str>,
+        output: Option<&str>,
+        generate_impl: bool,
+        output_dir: &str,
+    ) -> CellResult<Vec<String>> {
+        let mut files = Vec::new();
+        let snake_name = to_snake_case(name);
+        let pascal_name = to_pascal_case(name);
+
+        let port_path = Path::new(output_dir).join(format!("src/application/ports/{}.rs", snake_name));
+        let port_content = render_usecase_port(&pascal_name, input, output);
+        if let Some(parent) = port_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&port_path, &port_content)?;
+        files.push(port_path.to_string_lossy().to_string());
+
+        let input_path = Path::new(output_dir).join(format!("src/application/dto/{}_input.rs", snake_name));
+        let input_content = render_dto(&format!("{}Input", pascal_name), input);
+        if let Some(parent) = input_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&input_path, &input_content)?;
+        files.push(input_path.to_string_lossy().to_string());
+
+        let output_path = Path::new(output_dir).join(format!("src/application/dto/{}_output.rs", snake_name));
+        let output_content = render_dto(&format!("{}Output", pascal_name), output);
+        if let Some(parent) = output_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&output_path, &output_content)?;
+        files.push(output_path.to_string_lossy().to_string());
+
+        if generate_impl {
+            let impl_path = Path::new(output_dir).join(format!("src/application/usecases/{}.rs", snake_name));
+            let impl_content = render_usecase_impl(&pascal_name, self.options.telemetry);
+            if let Some(parent) = impl_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::write(&impl_path, &impl_content)?;
+            files.push(impl_path.to_string_lossy().to_string());
+        }
+
+        Ok(files)
+    }
 }
 
 fn render_port_trait(port: &crate::domain::cell_spec::PortSpec) -> String {
@@ -145,24 +324,739 @@ pub trait {} {{
     )
 }
 
-fn render_adapter_struct(name: &str, kind: AdapterKind, port: &str) -> String {
+fn render_adapter_struct(name: &str, kind: AdapterKind, port: &str, telemetry: bool) -> String {
+    let pascal = to_pascal_case(name);
+    let port_pascal = to_pascal_case(port);
+    let snake_port = to_snake_case(port);
+    let kind_str = format!("{:?}", kind).to_lowercase();
+    
+    let tracing_import = if telemetry { "use tracing::{info_span, debug_span, Instrument};\n" } else { "" };
+    let metrics_import = if telemetry { "use metrics::counter;\n" } else { "" };
+    
+    match kind {
+        AdapterKind::Http => {
+            let handler_impl = if telemetry {
+                format!(r#"
+    // HTTP Handler with Metrics + Trace + Log
+    async fn handle_{snake_port}(
+        State(usecase): State<Box<dyn {port_pascal} + Send + Sync>>,
+        Json(input): Json<()>,
+    ) -> CellResult<Json<()>> {{
+        let span = info_span!("http_handler", 
+            handler = "{snake_port}",
+            method = "POST",
+            layer = "adapter"
+        );
+        async move {{
+            tracing::info!("Processing HTTP request: {snake_port}");
+            counter!("http_requests_total", 
+                "handler" => "{snake_port}",
+                "method" => "POST"
+            ).increment(1);
+            
+            // TODO: 调用 usecase.execute(input).await
+            Ok(Json(()))
+        }}
+        .instrument(span)
+        .await
+    }}"#, 
+                    snake_port = snake_port, 
+                    port_pascal = port_pascal
+                )
+            } else {
+                format!(r#"
+    async fn handle_{snake_port}(
+        State(usecase): State<Box<dyn {port_pascal} + Send + Sync>>,
+        Json(input): Json<()>,
+    ) -> CellResult<Json<()>> {{
+        // TODO: 调用 usecase.execute(input).await
+        Ok(Json(()))
+    }}"#,
+                    snake_port = snake_port,
+                    port_pascal = port_pascal
+                )
+            };
+
+            let new_body = if telemetry {
+                format!(r#"        tracing::info!("Initializing HTTP adapter: {pascal}");"#, pascal = pascal)
+            } else {
+                "".to_string()
+            };
+
+            format!(
+r#"use crate::application::ports::{snake_port}::{port_pascal};
+use crate::domain::errors::CellResult;
+use axum::{{Json, extract::State}};
+{tracing_import}{metrics_import}
+pub struct {pascal}HttpAdapter {{
+    usecase: Box<dyn {port_pascal} + Send + Sync>,
+}}
+
+impl {pascal}HttpAdapter {{
+    pub fn new(usecase: Box<dyn {port_pascal} + Send + Sync>) -> Self {{
+{new_body}
+        Self {{ usecase }}
+    }}
+
+    pub fn routes(&self) -> axum::Router {{
+        axum::Router::new()
+            // TODO: 添加路由
+            // .route("/api/{snake_port}", axum::routing::post(Self::handle_{snake_port}))
+            // .with_state(self.usecase.clone())
+    }}
+{handler_impl}
+}}
+"#,
+                pascal = pascal,
+                port_pascal = port_pascal,
+                snake_port = snake_port,
+                tracing_import = tracing_import,
+                metrics_import = metrics_import,
+                new_body = new_body,
+                handler_impl = handler_impl,
+            )
+        }
+        AdapterKind::Postgres | AdapterKind::InMemory | AdapterKind::Redis | AdapterKind::File => {
+            let metric_fn = if telemetry {
+                format!(r#"
+    fn record_metric(operation: &str) {{
+        counter!("repository_operations_total", 
+            "adapter" => "{pascal}", 
+            "operation" => operation,
+            "kind" => "{kind_str}"
+        ).increment(1);
+    }}"#, pascal = pascal, kind_str = kind_str)
+            } else {
+                "".to_string()
+            };
+
+            let new_body = if telemetry {
+                format!(r#"        tracing::info!("Initializing {kind_str} repository adapter: {pascal}");"#, 
+                    kind_str = kind_str, pascal = pascal)
+            } else {
+                "".to_string()
+            };
+
+            let method_body = |op: &str| -> String {
+                if telemetry {
+                    match op {
+                        "find_by_id" => format!(r#"
+    async fn find_by_id(&self, id: &str) -> CellResult<Option<()>> {{
+        let span = debug_span!("repo_find_by_id", id = %id, adapter = "{pascal}");
+        let _enter = span.enter();
+        Self::record_metric("find_by_id");
+        
+        // TODO: 实现 find_by_id
+        Ok(None)
+    }}"#, pascal = pascal),
+                        "save" => format!(r#"
+    async fn save(&self, entity: &()) -> CellResult<()> {{
+        let span = debug_span!("repo_save", adapter = "{pascal}");
+        let _enter = span.enter();
+        Self::record_metric("save");
+        
+        // TODO: 实现 save
+        Ok(())
+    }}"#, pascal = pascal),
+                        "delete" => format!(r#"
+    async fn delete(&self, id: &str) -> CellResult<()> {{
+        let span = debug_span!("repo_delete", id = %id, adapter = "{pascal}");
+        let _enter = span.enter();
+        Self::record_metric("delete");
+        
+        // TODO: 实现 delete
+        Ok(())
+    }}"#, pascal = pascal),
+                        "list" => format!(r#"
+    async fn list(&self, page: u32, page_size: u32) -> CellResult<Vec<()>> {{
+        let span = debug_span!("repo_list", page = page, page_size = page_size, adapter = "{pascal}");
+        let _enter = span.enter();
+        Self::record_metric("list");
+        
+        // TODO: 实现 list
+        Ok(vec![])
+    }}"#, pascal = pascal),
+                        _ => "".to_string(),
+                    }
+                } else {
+                    match op {
+                        "find_by_id" => r#"
+    async fn find_by_id(&self, id: &str) -> CellResult<Option<()>> {
+        // TODO: 实现 find_by_id
+        Ok(None)
+    }"#.to_string(),
+                        "save" => r#"
+    async fn save(&self, entity: &()) -> CellResult<()> {
+        // TODO: 实现 save
+        Ok(())
+    }"#.to_string(),
+                        "delete" => r#"
+    async fn delete(&self, id: &str) -> CellResult<()> {
+        // TODO: 实现 delete
+        Ok(())
+    }"#.to_string(),
+                        "list" => r#"
+    async fn list(&self, page: u32, page_size: u32) -> CellResult<Vec<()>> {
+        // TODO: 实现 list
+        Ok(vec![])
+    }"#.to_string(),
+                        _ => "".to_string(),
+                    }
+                }
+            };
+
+            format!(
+r#"use crate::application::ports::repositories::{snake_port}::{port_pascal};
+use crate::domain::errors::CellResult;
+{tracing_import}{metrics_import}
+pub struct {pascal}Repository {{
+    // TODO: 添加 {kind_str} 特定的依赖
+}}
+
+impl {pascal}Repository {{
+    pub fn new() -> Self {{
+{new_body}
+        Self {{}}
+    }}{metric_fn}
+}}
+
+#[async_trait::async_trait]
+impl {port_pascal} for {pascal}Repository {{
+{find_by_id}{save}{delete}{list}
+}}
+"#,
+                pascal = pascal,
+                port_pascal = port_pascal,
+                snake_port = snake_port,
+                kind_str = kind_str,
+                tracing_import = tracing_import,
+                metrics_import = metrics_import,
+                new_body = new_body,
+                metric_fn = metric_fn,
+                find_by_id = method_body("find_by_id"),
+                save = method_body("save"),
+                delete = method_body("delete"),
+                list = method_body("list"),
+            )
+        }
+        AdapterKind::Kafka | AdapterKind::Nats => {
+            let metric_fn = if telemetry {
+                format!(r#"
+    fn record_metric(operation: &str) {{
+        counter!("message_operations_total", 
+            "adapter" => "{pascal}", 
+            "operation" => operation,
+            "broker" => "{kind_str}"
+        ).increment(1);
+    }}"#, pascal = pascal, kind_str = kind_str)
+            } else {
+                "".to_string()
+            };
+
+            let new_body = if telemetry {
+                format!(r#"        tracing::info!("Initializing {kind_str} message adapter: {pascal}");"#,
+                    kind_str = kind_str, pascal = pascal)
+            } else {
+                "".to_string()
+            };
+
+            let publish_fn = if telemetry {
+                format!(r#"
+    async fn publish(&self, topic: &str, payload: &[u8]) -> CellResult<()> {{
+        let span = info_span!("message_publish", 
+            topic = topic, 
+            adapter = "{pascal}",
+            broker = "{kind_str}"
+        );
+        let _enter = span.enter();
+        Self::record_metric("publish");
+        tracing::info!(topic = topic, "Publishing message");
+        
+        // TODO: 实现 publish
+        Ok(())
+    }}
+
+    async fn consume(&self, topic: &str) -> CellResult<Vec<u8>> {{
+        let span = info_span!("message_consume", 
+            topic = topic, 
+            adapter = "{pascal}",
+            broker = "{kind_str}"
+        );
+        let _enter = span.enter();
+        Self::record_metric("consume");
+        tracing::info!(topic = topic, "Consuming message");
+        
+        // TODO: 实现 consume
+        Ok(vec![])
+    }}"#,
+                    pascal = pascal, kind_str = kind_str
+                )
+            } else {
+                r#"
+    async fn publish(&self, topic: &str, payload: &[u8]) -> CellResult<()> {
+        // TODO: 实现 publish
+        Ok(())
+    }
+
+    async fn consume(&self, topic: &str) -> CellResult<Vec<u8>> {
+        // TODO: 实现 consume
+        Ok(vec![])
+    }"#.to_string()
+            };
+
+            format!(
+r#"use crate::application::ports::{snake_port}::{port_pascal};
+use crate::domain::errors::CellResult;
+{tracing_import}{metrics_import}
+pub struct {pascal}MessageAdapter {{
+    // TODO: 添加 {kind_str} producer/consumer
+}}
+
+impl {pascal}MessageAdapter {{
+    pub fn new() -> Self {{
+{new_body}
+        Self {{}}
+    }}{metric_fn}{publish_fn}
+}}
+"#,
+                pascal = pascal,
+                port_pascal = port_pascal,
+                snake_port = snake_port,
+                kind_str = kind_str,
+                tracing_import = tracing_import,
+                metrics_import = metrics_import,
+                new_body = new_body,
+                metric_fn = metric_fn,
+                publish_fn = publish_fn,
+            )
+        }
+        AdapterKind::Grpc => {
+            let new_body = if telemetry {
+                format!(r#"        tracing::info!("Initializing gRPC adapter: {pascal}");"#, pascal = pascal)
+            } else {
+                "".to_string()
+            };
+
+            format!(
+r#"use crate::application::ports::{snake_port}::{port_pascal};
+use crate::domain::errors::CellResult;
+{tracing_import}
+pub struct {pascal}GrpcAdapter {{
+    usecase: Box<dyn {port_pascal} + Send + Sync>,
+}}
+
+impl {pascal}GrpcAdapter {{
+    pub fn new(usecase: Box<dyn {port_pascal} + Send + Sync>) -> Self {{
+{new_body}
+        Self {{ usecase }}
+    }}
+
+    // gRPC service implementation
+    // TODO: 实现 gRPC service
+}}
+"#,
+                pascal = pascal,
+                port_pascal = port_pascal,
+                snake_port = snake_port,
+                tracing_import = tracing_import,
+                new_body = new_body,
+            )
+        }
+        AdapterKind::Mock => {
+            let new_body = if telemetry {
+                format!(r#"        tracing::debug!("Initializing mock adapter: {pascal}");"#, pascal = pascal)
+            } else {
+                "".to_string()
+            };
+
+            format!(
+r#"use crate::application::ports::{snake_port}::{port_pascal};
+use crate::domain::errors::CellResult;
+{tracing_import}
+pub struct {pascal}MockAdapter {{
+    // TODO: 添加 mock 数据存储
+}}
+
+impl {pascal}MockAdapter {{
+    pub fn new() -> Self {{
+{new_body}
+        Self {{}}
+    }}
+}}
+
+#[cfg(test)]
+impl {pascal}MockAdapter {{
+    // TODO: 添加测试辅助方法
+}}
+"#,
+                pascal = pascal,
+                port_pascal = port_pascal,
+                snake_port = snake_port,
+                tracing_import = tracing_import,
+                new_body = new_body,
+            )
+        }
+    }
+}
+
+fn parse_fields(fields: Option<&str>) -> Vec<(String, String)> {
+    let mut result = Vec::new();
+    if let Some(fields_str) = fields {
+        for field in fields_str.split(',') {
+            let field = field.trim();
+            if field.is_empty() {
+                continue;
+            }
+            let parts: Vec<&str> = field.split(':').collect();
+            if parts.len() >= 2 {
+                result.push((parts[0].trim().to_string(), parts[1].trim().to_string()));
+            } else {
+                result.push((parts[0].trim().to_string(), "String".to_string()));
+            }
+        }
+    }
+    result
+}
+
+fn format_struct_fields(fields: &[(String, String)]) -> String {
+    if fields.is_empty() {
+        String::new()
+    } else {
+        fields.iter()
+            .map(|(name, ty)| format!("    pub {}: {}", name, ty))
+            .collect::<Vec<_>>()
+            .join(",\n")
+    }
+}
+
+fn render_entity(name: &str, fields: Option<&str>) -> String {
+    let pascal = to_pascal_case(name);
+    let fields_vec = parse_fields(fields);
+    let fields_str = format_struct_fields(&fields_vec);
+    
+    let id_field = if !fields_vec.iter().any(|(n, _)| n == "id") {
+        "    pub id: String,".to_string()
+    } else {
+        String::new()
+    };
+
+    let all_fields = if id_field.is_empty() {
+        fields_str
+    } else if fields_str.is_empty() {
+        id_field
+    } else {
+        format!("{}\n{}", id_field, fields_str)
+    };
+
     format!(
-        r#"// Adapter: {} (kind: {:?})
-// Implements port: {}
+        r#"use crate::domain::errors::CellResult;
 
-pub struct {}Adapter;
+#[derive(Debug, Clone)]
+pub struct {} {{
+{}
+}}
 
-impl {}Adapter {{
+impl {} {{
+    pub fn new(id: String) -> Self {{
+        Self {{
+            id,
+        }}
+    }}
+
+    pub fn id(&self) -> &str {{
+        &self.id
+    }}
+}}
+"#,
+        pascal,
+        all_fields,
+        pascal,
+    )
+}
+
+fn render_value_object(name: &str, fields: Option<&str>) -> String {
+    let pascal = to_pascal_case(name);
+    let fields_vec = parse_fields(fields);
+    let fields_str = format_struct_fields(&fields_vec);
+
+    format!(
+        r#"#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct {} {{
+{}
+}}
+
+impl {} {{
+    pub fn new({}) -> CellResult<Self> {{
+        Ok(Self {{
+            {}
+        }})
+    }}
+}}
+"#,
+        pascal,
+        fields_str,
+        pascal,
+        fields_vec.iter().map(|(n, t)| format!("{}: {}", n, t)).collect::<Vec<_>>().join(", "),
+        fields_vec.iter().map(|(n, _)| format!("{},", n)).collect::<Vec<_>>().join("\n            "),
+    )
+}
+
+fn render_aggregate(name: &str) -> String {
+    let pascal = to_pascal_case(name);
+
+    format!(
+        r#"use crate::domain::events::DomainEvent;
+
+#[derive(Debug, Clone)]
+pub struct {}Aggregate {{
+    id: String,
+    events: Vec<Box<dyn DomainEvent>>,
+}}
+
+impl {}Aggregate {{
+    pub fn new(id: String) -> Self {{
+        Self {{
+            id,
+            events: Vec::new(),
+        }}
+    }}
+
+    pub fn id(&self) -> &str {{
+        &self.id
+    }}
+
+    fn record_event(&mut self, event: Box<dyn DomainEvent>) {{
+        self.events.push(event);
+    }}
+
+    pub fn events(&self) -> &[Box<dyn DomainEvent>] {{
+        &self.events
+    }}
+
+    pub fn clear_events(&mut self) {{
+        self.events.clear();
+    }}
+}}
+"#,
+        pascal,
+        pascal,
+    )
+}
+
+fn render_domain_event(name: &str, fields: Option<&str>) -> String {
+    let pascal = to_pascal_case(name);
+    let fields_vec = parse_fields(fields);
+    let fields_str = format_struct_fields(&fields_vec);
+
+    let occurred_at = if !fields_vec.iter().any(|(n, _)| n == "occurred_at") {
+        "    pub occurred_at: chrono::DateTime<chrono::Utc>,".to_string()
+    } else {
+        String::new()
+    };
+
+    let all_fields = if occurred_at.is_empty() {
+        fields_str
+    } else if fields_str.is_empty() {
+        occurred_at
+    } else {
+        format!("{}\n{}", fields_str, occurred_at)
+    };
+
+    format!(
+        r#"use crate::domain::events::DomainEvent;
+
+#[derive(Debug, Clone)]
+pub struct {}Event {{
+{}
+}}
+
+impl {}Event {{
+    pub fn new({}) -> Self {{
+        Self {{
+            {}
+            occurred_at: chrono::Utc::now(),
+        }}
+    }}
+}}
+
+impl DomainEvent for {}Event {{
+    fn event_type(&self) -> &str {{
+        "{}"
+    }}
+
+    fn occurred_at(&self) -> chrono::DateTime<chrono::Utc> {{
+        self.occurred_at
+    }}
+}}
+"#,
+        pascal,
+        all_fields,
+        pascal,
+        fields_vec.iter().map(|(n, t)| format!("{}: {}", n, t)).collect::<Vec<_>>().join(", "),
+        fields_vec.iter().map(|(n, _)| format!("{},", n)).collect::<Vec<_>>().join("\n            "),
+        pascal,
+        snake_case_to_words(&to_snake_case(&pascal)),
+    )
+}
+
+fn snake_case_to_words(s: &str) -> String {
+    s.replace('_', " ")
+}
+
+fn render_domain_service(name: &str) -> String {
+    let pascal = to_pascal_case(name);
+
+    format!(
+        r#"pub struct {};
+
+impl {} {{
     pub fn new() -> Self {{
         Self
     }}
 }}
 "#,
-        name,
-        kind,
-        port,
-        to_pascal_case(name),
-        to_pascal_case(name),
+        pascal,
+        pascal,
+    )
+}
+
+fn render_repository(name: &str, entity: &str) -> String {
+    let pascal = to_pascal_case(name);
+    let entity_pascal = to_pascal_case(entity);
+
+    format!(
+        r#"use crate::domain::errors::CellResult;
+use crate::domain::entities::{};
+
+#[async_trait::async_trait]
+pub trait {} {{
+    async fn find_by_id(&self, id: &str) -> CellResult<Option<{}>>;
+
+    async fn save(&self, entity: &{}) -> CellResult<()>;
+
+    async fn delete(&self, id: &str) -> CellResult<()>;
+
+    async fn list(&self, page: u32, page_size: u32) -> CellResult<Vec<{}>>;
+}}
+"#,
+        entity_pascal,
+        pascal,
+        entity_pascal,
+        entity_pascal,
+        entity_pascal,
+    )
+}
+
+fn render_usecase_port(name: &str, input: Option<&str>, output: Option<&str>) -> String {
+    let pascal = to_pascal_case(name);
+    let input_type = if input.is_some() {
+        format!("{}Input", pascal)
+    } else {
+        "()".to_string()
+    };
+    let output_type = if output.is_some() {
+        format!("{}Output", pascal)
+    } else {
+        "()".to_string()
+    };
+
+    format!(
+        r#"use crate::application::dto::{}Input;
+use crate::application::dto::{}Output;
+use crate::domain::errors::CellResult;
+
+#[async_trait::async_trait]
+pub trait {}UseCase {{
+    async fn execute(&self, input: {}) -> CellResult<{}>;
+}}
+"#,
+        pascal,
+        pascal,
+        pascal,
+        input_type,
+        output_type,
+    )
+}
+
+fn render_dto(name: &str, fields: Option<&str>) -> String {
+    let pascal = to_pascal_case(name);
+    let fields_vec = parse_fields(fields);
+    let fields_str = format_struct_fields(&fields_vec);
+
+    format!(
+        r#"#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct {} {{
+{}
+}}
+"#,
+        pascal,
+        fields_str,
+    )
+}
+
+fn render_usecase_impl(name: &str, telemetry: bool) -> String {
+    let pascal = to_pascal_case(name);
+    let snake = to_snake_case(name);
+
+    let telemetry_imports = if telemetry {
+        "use tracing::{info_span, Instrument};\n"
+    } else {
+        ""
+    };
+
+    let execute_body = if telemetry {
+        format!(
+            r#"    async fn execute(&self, input: {}Input) -> CellResult<{}Output> {{
+        let span = info_span!("usecase_execute", 
+            usecase = "{}",
+            layer = "application"
+        );
+        async move {{
+            todo!("Implement {} use case")
+        }}
+        .instrument(span)
+        .await
+    }}"#,
+            pascal, pascal, snake, snake
+        )
+    } else {
+        format!(
+            r#"    async fn execute(&self, input: {}Input) -> CellResult<{}Output> {{
+        todo!("Implement {} use case")
+    }}"#,
+            pascal, pascal, snake
+        )
+    };
+
+    format!(
+        r#"use crate::application::dto::{}Input;
+use crate::application::dto::{}Output;
+use crate::application::ports::{}UseCase;
+use crate::domain::errors::CellResult;
+{}
+pub struct {}UseCaseImpl {{
+}}
+
+impl {}UseCaseImpl {{
+    pub fn new() -> Self {{
+        Self {{}}
+    }}
+}}
+
+#[async_trait::async_trait]
+impl {}UseCase for {}UseCaseImpl {{
+{}
+}}
+"#,
+        pascal,
+        pascal,
+        pascal,
+        telemetry_imports,
+        pascal,
+        pascal,
+        pascal,
+        pascal,
+        execute_body,
     )
 }
 
@@ -262,7 +1156,12 @@ mod tests {
         let file_path = dir.path().join("src/adapters/in_memory_user_repo.rs");
         assert!(file_path.exists());
         let content = fs::read_to_string(&file_path).unwrap();
-        assert!(content.contains("InMemoryUserRepoAdapter"));
+        assert!(content.contains("InMemoryUserRepoRepository"));
+        assert!(content.contains("impl UserRepository for InMemoryUserRepoRepository"));
+        assert!(content.contains("find_by_id"));
+        assert!(content.contains("save"));
+        assert!(content.contains("delete"));
+        assert!(content.contains("list"));
     }
 
     #[test]

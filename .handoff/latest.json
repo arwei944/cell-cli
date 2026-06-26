@@ -1,0 +1,899 @@
+{
+  "package_id": "2fa523e9-f2f0-4269-9bc9-ec8b09422fd4",
+  "project_name": "cell-architecture",
+  "generated_at": "2026-06-25T12:06:22.051738500Z",
+  "generated_by": "Cell Agent",
+  "project_overview": {
+    "name": "cell-architecture",
+    "description": "",
+    "architecture_style": "Cell Architecture (Hexagonal + DDD)",
+    "tech_stack": [
+      "Rust"
+    ],
+    "key_directories": [
+      {
+        "path": "src/domain",
+        "purpose": "领域内核：核心业务模型、实体、值对象、领域服务",
+        "file_count": 12
+      },
+      {
+        "path": "src/application",
+        "purpose": "应用层：用例编排、Port接口、应用服务",
+        "file_count": 34
+      },
+      {
+        "path": "src/adapters",
+        "purpose": "适配器层：技术实现、外部系统对接",
+        "file_count": 9
+      },
+      {
+        "path": "src/interfaces",
+        "purpose": "接口层：CLI/API/UI等外部接入点",
+        "file_count": 11
+      }
+    ]
+  },
+  "current_task": {
+    "name": "仪表盘与决策面板开发",
+    "description": "实现 Web 仪表盘、决策记录工具和自进化系统",
+    "status": "InProgress",
+    "started_at": "2026-06-24T22:41:16.901080Z",
+    "last_activity_at": "2026-06-24T22:41:16.948701100Z"
+  },
+  "architecture_snapshot": {
+    "layers": [
+      {
+        "name": "domain",
+        "file_count": 12,
+        "internal_deps": 0,
+        "external_deps": 0
+      },
+      {
+        "name": "application",
+        "file_count": 34,
+        "internal_deps": 0,
+        "external_deps": 0
+      },
+      {
+        "name": "adapters",
+        "file_count": 9,
+        "internal_deps": 0,
+        "external_deps": 0
+      },
+      {
+        "name": "interfaces",
+        "file_count": 11,
+        "internal_deps": 0,
+        "external_deps": 0
+      }
+    ],
+    "total_violations": 0,
+    "domain_external_deps": 0
+  },
+  "entropy_snapshot": {
+    "overall_score": 36.24080605286389,
+    "threshold": 60.0,
+    "dimensions": {
+      "naming": 18.883614552953055,
+      "structural": 42.73856729663729,
+      "complexity": 52.09351669123778,
+      "test": 16.636520749729613,
+      "coupling": 36.02382380246359
+    },
+    "file_count": 73,
+    "total_lines": 13853
+  },
+  "progress": {
+    "task_id": "16d71fa5-e8bf-4f27-b921-e308ae02dbb2",
+    "task_name": "仪表盘与决策面板开发",
+    "description": "实现 Web 仪表盘、决策记录工具和自进化系统",
+    "status": "InProgress",
+    "timeline": [
+      {
+        "id": "99c24d3f-0068-44db-a653-e3ef23762a1f",
+        "timestamp": "2026-06-24T22:41:16.901083800Z",
+        "event_type": "Start",
+        "message": "Task started",
+        "details": null,
+        "author": "AI Agent"
+      },
+      {
+        "id": "ff8ff285-e10c-4283-8aa2-543a684bb3cb",
+        "timestamp": "2026-06-24T22:41:16.916959500Z",
+        "event_type": "Update",
+        "message": "完成决策记录领域模型和服务",
+        "details": "实现了 DecisionRecord 结构体、DecisionService 和文件存储适配器",
+        "author": "AI Agent"
+      },
+      {
+        "id": "56fd75ae-3591-44bc-ad30-95e40a393de4",
+        "timestamp": "2026-06-24T22:41:16.932425400Z",
+        "event_type": "Update",
+        "message": "完成观测层服务和 Web 仪表盘后端",
+        "details": "实现了 ObservabilityService 和基于 Axum 的 Web API",
+        "author": "AI Agent"
+      },
+      {
+        "id": "f8b47b2e-1b7d-44ea-836d-472c0d696749",
+        "timestamp": "2026-06-24T22:41:16.948701100Z",
+        "event_type": "Update",
+        "message": "完成仪表盘前端页面开发",
+        "details": "实现了包含进度条、熵值面板、决策面板的仪表盘 UI",
+        "author": "AI Agent"
+      }
+    ],
+    "related_files": [],
+    "blockers": [],
+    "next_steps": [],
+    "assignee": "AI Agent",
+    "started_at": "2026-06-24T22:41:16.901080Z",
+    "updated_at": "2026-06-24T22:41:16.948701100Z",
+    "completed_at": null,
+    "metadata": {}
+  },
+  "related_files": [
+    {
+      "path": "src\\adapters\\ast_analyzer.rs",
+      "role": "适配器",
+      "description": "",
+      "lines_of_code": 233,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\adapters\\dashboard.html",
+      "role": "适配器",
+      "description": "",
+      "lines_of_code": 489,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\adapters\\file_decision_store.rs",
+      "role": "适配器",
+      "description": "",
+      "lines_of_code": 149,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\adapters\\file_evolution_store.rs",
+      "role": "适配器",
+      "description": "",
+      "lines_of_code": 146,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\adapters\\file_handoff_exporter.rs",
+      "role": "适配器",
+      "description": "",
+      "lines_of_code": 95,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\adapters\\file_progress_store.rs",
+      "role": "适配器",
+      "description": "",
+      "lines_of_code": 145,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\adapters\\mod.rs",
+      "role": "适配器",
+      "description": "",
+      "lines_of_code": 7,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\adapters\\template_engine.rs",
+      "role": "适配器",
+      "description": "",
+      "lines_of_code": 331,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\adapters\\web_dashboard.rs",
+      "role": "适配器",
+      "description": "",
+      "lines_of_code": 239,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\architecture_tests.rs",
+      "role": "测试",
+      "description": "",
+      "lines_of_code": 128,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\arch_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 437,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\auto_progress_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 426,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\config_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 334,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\coverage_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 336,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\decision_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 333,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\dependency_analyzer.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 458,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\entropy_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 420,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\evolution_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 446,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\fast_verify_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 331,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\generate_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 287,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\handoff_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 474,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\impact_analysis_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 569,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\incremental_entropy_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 445,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\init_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 147,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\mod.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 22,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\observability\\dashboard.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 128,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\observability\\metrics.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 121,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\observability\\mod.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 9,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\observability\\phases.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 152,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\ports\\code_generator.rs",
+      "role": "端口接口",
+      "description": "",
+      "lines_of_code": 11,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\ports\\decision_store.rs",
+      "role": "端口接口",
+      "description": "",
+      "lines_of_code": 10,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\ports\\evolution_store.rs",
+      "role": "端口接口",
+      "description": "",
+      "lines_of_code": 10,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\ports\\handoff_exporter.rs",
+      "role": "端口接口",
+      "description": "",
+      "lines_of_code": 8,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\ports\\mod.rs",
+      "role": "端口接口",
+      "description": "",
+      "lines_of_code": 5,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\ports\\progress_store.rs",
+      "role": "端口接口",
+      "description": "",
+      "lines_of_code": 9,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\progress_bar.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 498,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\progress_service.rs",
+      "role": "应用服务",
+      "description": "",
+      "lines_of_code": 207,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\simplicity_checker\\analysis.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 185,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\simplicity_checker\\checks.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 133,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\simplicity_checker\\format.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 116,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\simplicity_checker\\issues.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 39,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\simplicity_checker\\mod.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 314,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\application\\simplicity_checker\\types.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 123,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\domain\\adr.rs",
+      "role": "领域模型",
+      "description": "",
+      "lines_of_code": 69,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\domain\\cell_spec.rs",
+      "role": "领域模型",
+      "description": "",
+      "lines_of_code": 82,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\domain\\context.rs",
+      "role": "领域模型",
+      "description": "",
+      "lines_of_code": 71,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\domain\\decision.rs",
+      "role": "领域模型",
+      "description": "",
+      "lines_of_code": 331,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\domain\\entropy.rs",
+      "role": "领域模型",
+      "description": "",
+      "lines_of_code": 892,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\domain\\errors.rs",
+      "role": "领域模型",
+      "description": "",
+      "lines_of_code": 36,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\domain\\evolution.rs",
+      "role": "领域模型",
+      "description": "",
+      "lines_of_code": 374,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\domain\\feature.rs",
+      "role": "领域模型",
+      "description": "",
+      "lines_of_code": 78,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\domain\\handoff.rs",
+      "role": "领域模型",
+      "description": "",
+      "lines_of_code": 422,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\domain\\mod.rs",
+      "role": "领域模型",
+      "description": "",
+      "lines_of_code": 11,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\domain\\observability.rs",
+      "role": "领域模型",
+      "description": "",
+      "lines_of_code": 164,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\domain\\progress.rs",
+      "role": "领域模型",
+      "description": "",
+      "lines_of_code": 213,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\interfaces\\cli.rs",
+      "role": "接口层",
+      "description": "",
+      "lines_of_code": 679,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\interfaces\\commands\\arch_cmd.rs",
+      "role": "接口层",
+      "description": "",
+      "lines_of_code": 44,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\interfaces\\commands\\decision_cmd.rs",
+      "role": "接口层",
+      "description": "",
+      "lines_of_code": 134,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\interfaces\\commands\\dev_cmd.rs",
+      "role": "接口层",
+      "description": "",
+      "lines_of_code": 86,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\interfaces\\commands\\entropy_cmd.rs",
+      "role": "接口层",
+      "description": "",
+      "lines_of_code": 60,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\interfaces\\commands\\evolve_cmd.rs",
+      "role": "接口层",
+      "description": "",
+      "lines_of_code": 319,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\interfaces\\commands\\init_cmd.rs",
+      "role": "接口层",
+      "description": "",
+      "lines_of_code": 93,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\interfaces\\commands\\lifecycle_cmd.rs",
+      "role": "接口层",
+      "description": "",
+      "lines_of_code": 427,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\interfaces\\commands\\mod.rs",
+      "role": "接口层",
+      "description": "",
+      "lines_of_code": 8,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\interfaces\\commands\\quality_cmd.rs",
+      "role": "接口层",
+      "description": "",
+      "lines_of_code": 156,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\interfaces\\mod.rs",
+      "role": "接口层",
+      "description": "",
+      "lines_of_code": 2,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\lib.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 8,
+      "modification_count": 0,
+      "last_modified": null
+    },
+    {
+      "path": "src\\main.rs",
+      "role": "其他",
+      "description": "",
+      "lines_of_code": 45,
+      "modification_count": 0,
+      "last_modified": null
+    }
+  ],
+  "recent_files": [
+    {
+      "path": "src\\interfaces\\commands\\lifecycle_cmd.rs",
+      "last_modified": "2026-06-25T12:02:12.910041Z",
+      "lines_of_code": 427,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\application\\fast_verify_service.rs",
+      "last_modified": "2026-06-25T01:55:48.552452900Z",
+      "lines_of_code": 331,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\adapters\\file_progress_store.rs",
+      "last_modified": "2026-06-25T01:48:47.405680Z",
+      "lines_of_code": 145,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\interfaces\\cli.rs",
+      "last_modified": "2026-06-25T01:43:55.235594800Z",
+      "lines_of_code": 679,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\application\\simplicity_checker\\mod.rs",
+      "last_modified": "2026-06-25T01:30:44.471702800Z",
+      "lines_of_code": 314,
+      "change_type": "modified"
+    },
+    {
+      "path": "Cargo.toml",
+      "last_modified": "2026-06-25T01:26:27.122561300Z",
+      "lines_of_code": 84,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\application\\observability\\metrics.rs",
+      "last_modified": "2026-06-25T01:15:52.101838900Z",
+      "lines_of_code": 121,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\application\\observability\\dashboard.rs",
+      "last_modified": "2026-06-25T01:15:21.692553300Z",
+      "lines_of_code": 128,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\adapters\\web_dashboard.rs",
+      "last_modified": "2026-06-25T01:14:58.378176500Z",
+      "lines_of_code": 239,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\application\\mod.rs",
+      "last_modified": "2026-06-25T01:13:41.214332600Z",
+      "lines_of_code": 22,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\application\\observability\\mod.rs",
+      "last_modified": "2026-06-25T01:11:38.788340300Z",
+      "lines_of_code": 9,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\application\\observability\\phases.rs",
+      "last_modified": "2026-06-25T01:10:59.576108200Z",
+      "lines_of_code": 152,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\application\\simplicity_checker\\issues.rs",
+      "last_modified": "2026-06-25T01:09:15.063586Z",
+      "lines_of_code": 39,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\application\\simplicity_checker\\format.rs",
+      "last_modified": "2026-06-25T01:05:16.809218100Z",
+      "lines_of_code": 116,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\application\\simplicity_checker\\analysis.rs",
+      "last_modified": "2026-06-25T01:04:57.184321700Z",
+      "lines_of_code": 185,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\application\\simplicity_checker\\checks.rs",
+      "last_modified": "2026-06-25T01:04:38.660742800Z",
+      "lines_of_code": 133,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\application\\simplicity_checker\\types.rs",
+      "last_modified": "2026-06-25T01:04:19.975315200Z",
+      "lines_of_code": 123,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\adapters\\dashboard.html",
+      "last_modified": "2026-06-25T00:58:07.584783900Z",
+      "lines_of_code": 489,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\domain\\observability.rs",
+      "last_modified": "2026-06-25T00:54:00.806220900Z",
+      "lines_of_code": 164,
+      "change_type": "modified"
+    },
+    {
+      "path": "src\\interfaces\\commands\\dev_cmd.rs",
+      "last_modified": "2026-06-25T00:49:30.672390800Z",
+      "lines_of_code": 86,
+      "change_type": "modified"
+    }
+  ],
+  "open_questions": [],
+  "decisions": [
+    {
+      "id": "0b36c500-1310-402b-9759-157ea87d8c31",
+      "title": "选择 Rust 作为开发语言",
+      "context": "项目需要高性能、内存安全和跨平台能力",
+      "decision": "使用 Rust 语言开发 Cell 架构工具链",
+      "status": "Accepted",
+      "category": "Technology",
+      "alternatives": [],
+      "consequences": [],
+      "rationale": "Rust 提供零成本抽象、内存安全保证和优秀的工具链，适合构建架构级工具",
+      "related_tasks": [],
+      "related_files": [],
+      "tags": [],
+      "made_by": "AI Agent",
+      "made_at": "2026-06-24T22:39:08.123085300Z",
+      "updated_at": "2026-06-24T22:39:08.123085300Z",
+      "revoked_at": null,
+      "superseded_by": null,
+      "metadata": {}
+    },
+    {
+      "id": "13d28af2-f56f-4f2e-a7b8-fa3357b64e2b",
+      "title": "采用 Axum 作为 Web 框架",
+      "context": "仪表盘需要 Web 服务支持",
+      "decision": "使用 Axum 框架开发 Web 仪表盘",
+      "status": "Accepted",
+      "category": "Technology",
+      "alternatives": [],
+      "consequences": [],
+      "rationale": "Axum 基于 Tokio 生态，性能优秀，设计优雅，与 Tower 生态兼容",
+      "related_tasks": [],
+      "related_files": [],
+      "tags": [],
+      "made_by": "AI Agent",
+      "made_at": "2026-06-24T22:39:20.927841800Z",
+      "updated_at": "2026-06-24T22:39:20.927841800Z",
+      "revoked_at": null,
+      "superseded_by": null,
+      "metadata": {}
+    },
+    {
+      "id": "19038a59-f796-4166-a4c4-e0e61a3b78be",
+      "title": "采用文件系统作为决策存储",
+      "context": "第一版工具需要轻量级存储",
+      "decision": "使用 JSON 文件存储决策记录于 .cell/decisions 目录",
+      "status": "Accepted",
+      "category": "Architecture",
+      "alternatives": [],
+      "consequences": [],
+      "rationale": "文件系统存储无需外部依赖，配置简单，便于版本控制",
+      "related_tasks": [],
+      "related_files": [],
+      "tags": [],
+      "made_by": "AI Agent",
+      "made_at": "2026-06-24T22:39:20.943456200Z",
+      "updated_at": "2026-06-24T22:39:20.943456200Z",
+      "revoked_at": null,
+      "superseded_by": null,
+      "metadata": {}
+    }
+  ],
+  "next_actions": [],
+  "environment_info": {
+    "rust_version": "rustc 1.96.0 (ac68faa20 2026-05-25)",
+    "dependencies": [],
+    "build_status": "Unknown",
+    "test_status": "Unknown"
+  },
+  "development_rules": [
+    "严格遵循四层架构（domain/application/adapters/interfaces），依赖只能向内",
+    "domain 层不能依赖任何外部框架或库（除了基础标准库）",
+    "使用 Cell 架构的 Port/Adapter 模式进行外部依赖隔离",
+    "所有公共 API 必须有单元测试覆盖",
+    "代码提交前必须通过 cargo clippy 和 cargo fmt 检查",
+    "架构约束通过编译期测试强制执行（architecture_tests）",
+    "熵值阈值不超过 60，超过必须先优化再继续开发",
+    "重要技术决策必须记录到决策日志（cell decision new）"
+  ],
+  "quick_start": [
+    "第一步：阅读本交接包，了解项目现状和当前任务",
+    "第二步：运行 `cell tools status` 查看可用工具",
+    "第三步：运行 `cell dashboard` 打开可视化仪表盘了解全局状态",
+    "第四步：运行 `cargo test` 确认所有测试通过",
+    "第五步：查看决策记录（cell decision list）了解技术选型背景",
+    "第六步：从 next_actions 中选择最高优先级任务开始开发",
+    "开发过程中随时使用 `cell progress log` 记录进度",
+    "遇到阻塞使用 `cell progress block` 记录，解除后用 `cell progress unblock`"
+  ],
+  "validation": {
+    "is_complete": true,
+    "missing_fields": [],
+    "warnings": [
+      "No next actions defined - handoff recipient may not know what to do next"
+    ]
+  }
+}

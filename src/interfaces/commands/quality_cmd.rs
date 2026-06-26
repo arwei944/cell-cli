@@ -151,6 +151,38 @@ pub fn cmd_config(args: ConfigArgs) -> CellResult<()> {
             service.save(&config)?;
             println!("✅ 已创建默认配置: {}", config_path);
         }
+        ConfigSub::Validate { path } => {
+            let path = path.unwrap_or_else(|| ".".to_string());
+            let service = ConfigService::new(&path);
+            let config = service.load()?;
+            let result = config.validate();
+
+            println!("\n{}", "=".repeat(50));
+            println!("  📐 配置文件验证");
+            println!("{}", "=".repeat(50));
+            println!("  配置文件: {}", service.config_path());
+
+            if result.errors.is_empty() && result.warnings.is_empty() {
+                println!("\n✅ 配置验证通过！所有配置项都有效。\n");
+            } else {
+                if !result.errors.is_empty() {
+                    println!("\n❌ 错误 ({}):", result.errors.len());
+                    for e in &result.errors {
+                        println!("   • {}", e);
+                    }
+                }
+                if !result.warnings.is_empty() {
+                    println!("\n⚠️  警告 ({}):", result.warnings.len());
+                    for w in &result.warnings {
+                        println!("   • {}", w);
+                    }
+                }
+                println!();
+                if !result.valid {
+                    std::process::exit(1);
+                }
+            }
+        }
     }
     Ok(())
 }

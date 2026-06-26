@@ -4,29 +4,25 @@ use crate::domain::entropy::{
     EntropyReport, FileCouplingInfo, FileEntropy, TestFileInfo,
 };
 use crate::domain::errors::CellResult;
+use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use walkdir::WalkDir;
 
 pub fn run_entropy_check(path: &str) -> CellResult<EntropyReport> {
     let root = Path::new(path);
-    let mut files: Vec<FileEntropy> = Vec::new();
-    let mut total_lines = 0;
-
-    let mut file_contents: HashMap<String, String> = HashMap::new();
-    let mut coupling_info: Vec<FileCouplingInfo> = Vec::new();
-    let mut test_info: Vec<TestFileInfo> = Vec::new();
 
     let t_start = std::time::Instant::now();
 
-    let mut rust_files: Vec<(String, String)> = Vec::new();
-    for entry in WalkDir::new(root)
+    let rust_files: Vec<(String, String)> = WalkDir::new(root)
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
-    {
-        let ext = entry.path().extension().and_then(|s| s.to_str());
-        if ext == Some("rs") || ext == Some("go") || ext == Some("ts") || ext == Some("js") {
+        .filter_map(|entry| {
+            let ext = entry.path().extension().and_then(|s| s.to_str());
+            if ext != Some("rs") && ext != Some("go") && ext != Some("ts") && ext != Some("js") {
+                return None;
+            }
             let content = std::fs::read_to_string(entry.path()).unwrap_or_default();
             let rel_path = entry
                 .path()
@@ -39,49 +35,130 @@ pub fn run_entropy_check(path: &str) -> CellResult<EntropyReport> {
                         .map(|s| s.to_string_lossy().to_string())
                         .unwrap_or_default()
                 });
-            rust_files.push((rel_path, content));
-        }
-    }
+            Some((rel_path, content))
+        })
+        .collect();
+
     let t_read = t_start.elapsed().as_micros();
 
-    let mut t_metrics = 0u128;
-    let mut t_coupling = 0u128;
-    let mut t_test = 0u128;
+    let file_stem_index: HashMap<String, String> = rust_files
+        .iter()
+        .map(|(path, _)| {
+            let stem = Path::new(path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .to_string();
+            (stem, path.clone())
+        })
+        .collect();
 
-    for (rel_path, content) in &rust_files {
-        let t1 = std::time::Instant::now();
-        let (file_entropy, _complexity, _structural, _naming) =
-            build_file_metrics(rel_path, content);
-        t_metrics += t1.elapsed().as_micros();
+    let mut files: Vec<FileEntropy> = Vec::with_capacity(rust_files.len());
+    let mut coupling_info: Vec<FileCouplingInfo> = Vec::with_capacity(rust_files.len());
+    let mut test_info: Vec<TestFileInfo> = Vec::with_capacity(rust_files.len());
+    let mut total_lines = 0;
+
+    let t_metrics_start = std::time::Instant::now();
+
+    let file_metrics_results: Vec<_> = rust_files
+        .par_iter()
+        .map(|(rel_path, content)| {
+            let (file_entropy, _complexity, _structural, _naming) =
+                build_file_metrics(rel_path, content);
+            let is_test = is_test_file(rel_path, content);
+            let (test_count, assertion_count, _test_lines_count) = count_test_metrics(content, is_test);
+
+            let imports = extract_imports(content);
+            let file_stem = Path::new(rel_path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+                .replace(['/', '\\'], "_");
+
+            (
+                file_entropy,
+                is_test,
+                test_count,
+                assertion_count,
+                imports,
+                file_stem,
+                rel_path.clone(),
+                content.clone(),
+            )
+        })
+        .collect();
+
+    let t_metrics = t_metrics_start.elapsed().as_micros();
+
+    let mut path_to_imports: HashMap<String, HashSet<String>> = HashMap::new();
+    let mut path_to_stem: HashMap<String, String> = HashMap::new();
+
+    for (
+        file_entropy,
+        is_test,
+        test_count,
+        assertion_count,
+        imports,
+        file_stem,
+        rel_path,
+        content,
+    ) in file_metrics_results
+    {
         total_lines += file_entropy.lines;
         files.push(file_entropy);
+        path_to_imports.insert(rel_path.clone(), imports.clone());
+        path_to_stem.insert(rel_path.clone(), file_stem.clone());
 
-        let t2 = std::time::Instant::now();
-        let (incoming, outgoing, cross_layer) = analyze_dependencies_fast(rel_path, content, &rust_files);
-        t_coupling += t2.elapsed().as_micros();
-        coupling_info.push(FileCouplingInfo {
-            path: rel_path.clone(),
-            incoming,
-            outgoing,
-            cross_layer,
-            in_cycle: false,
-        });
-
-        let t3 = std::time::Instant::now();
-        let is_test = is_test_file(rel_path, content);
-        let (test_count, assertion_count, _test_lines_count) = count_test_metrics(content, is_test);
-        t_test += t3.elapsed().as_micros();
+        let code_lines = if is_test { 0 } else { content.lines().count() };
+        let test_lines = if is_test { content.lines().count() } else { 0 };
         test_info.push(TestFileInfo {
             path: rel_path.clone(),
-            code_lines: if is_test { 0 } else { content.lines().count() },
-            test_lines: if is_test { content.lines().count() } else { 0 },
+            code_lines,
+            test_lines,
             test_count,
             assertion_count,
             is_test_file: is_test,
         });
 
-        file_contents.insert(rel_path.clone(), content.clone());
+        let mut outgoing = imports.len();
+        for import in &imports {
+            if file_stem_index.contains_key(import) {
+                outgoing += 1;
+            }
+        }
+
+        let cross_layer = check_cross_layer_dependency(&rel_path, &imports);
+
+        coupling_info.push(FileCouplingInfo {
+            path: rel_path,
+            incoming: 0,
+            outgoing,
+            cross_layer,
+            in_cycle: false,
+        });
     }
+
+    let t_coupling_start = std::time::Instant::now();
+
+    for (_i, info) in coupling_info.iter_mut().enumerate() {
+        let imports = path_to_imports.get(&info.path).unwrap();
+        let file_stem = path_to_stem.get(&info.path).unwrap();
+
+        for (other_path, other_imports) in &path_to_imports {
+            if other_path != &info.path {
+                if other_imports.contains(file_stem) {
+                    info.incoming += 1;
+                }
+                if imports.iter().any(|imp| {
+                    path_to_stem.get(other_path).map_or(false, |s| s == imp)
+                }) {
+                    info.outgoing += 1;
+                }
+            }
+        }
+    }
+
+    let t_coupling = t_coupling_start.elapsed().as_micros();
 
     let t_cycle_start = std::time::Instant::now();
     detect_cycles(&mut coupling_info);
@@ -119,8 +196,8 @@ pub fn run_entropy_check(path: &str) -> CellResult<EntropyReport> {
 
     let total = t_start.elapsed().as_millis();
     tracing::debug!(
-        "熵值计算耗时: {}ms (读取文件: {}us, 指标计算: {}us, 依赖分析: {}us, 测试统计: {}us, 循环检测: {}us, 聚合: {}us, 文件数: {})",
-        total, t_read, t_metrics, t_coupling, t_test, t_cycle, t_aggregate, files.len()
+        "熵值计算耗时: {}ms (读取文件: {}us, 指标计算: {}us, 依赖分析: {}us, 循环检测: {}us, 聚合: {}us, 文件数: {})",
+        total, t_read, t_metrics, t_coupling, t_cycle, t_aggregate, files.len()
     );
 
     Ok(EntropyReport {
@@ -135,48 +212,19 @@ pub fn run_entropy_check(path: &str) -> CellResult<EntropyReport> {
     })
 }
 
-fn analyze_dependencies_fast(
-    file_path: &str,
-    content: &str,
-    all_files: &[(String, String)],
-) -> (usize, usize, bool) {
+fn extract_imports(content: &str) -> HashSet<String> {
     let mut imports = HashSet::new();
-    let mut used_by = HashSet::new();
-
     for line in content.lines() {
         let trimmed = line.trim();
         if trimmed.starts_with("use ") || trimmed.starts_with("import ") {
             let parts: Vec<&str> = trimmed.split_whitespace().collect();
             if parts.len() >= 2 {
-                imports.insert(parts[1].to_string());
+                let import = parts[1].to_string();
+                imports.insert(import);
             }
         }
     }
-
-    let file_stem = Path::new(file_path)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("")
-        .replace(['/', '\\'], "_");
-
-    for (other_path, other_content) in all_files {
-        if other_path != file_path {
-            let other_stem = Path::new(other_path)
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .unwrap_or("");
-            if content.contains(other_stem) {
-                imports.insert(other_stem.to_string());
-            }
-            if other_content.contains(&file_stem) {
-                used_by.insert(other_path.clone());
-            }
-        }
-    }
-
-    let cross_layer = check_cross_layer_dependency(file_path, &imports);
-
-    (used_by.len(), imports.len(), cross_layer)
+    imports
 }
 
 fn check_cross_layer_dependency(file_path: &str, imports: &HashSet<String>) -> bool {
@@ -229,62 +277,55 @@ fn is_outward_dependency(from: &str, to: &str) -> bool {
 
 fn detect_cycles(files: &mut [FileCouplingInfo]) {
     let n = files.len();
-    let mut adj = vec![vec![false; n]; n];
-
-    for i in 0..n {
-        for j in 0..n {
-            if i != j && files[i].path.contains(&files[j].path.replace(['/', '\\'], "_")) {
-                adj[i][j] = true;
-            }
-        }
+    if n == 0 {
+        return;
     }
 
-    let in_cycle = detect_cyclic_nodes(&adj);
-    for i in 0..n {
-        files[i].in_cycle = in_cycle[i];
+    let mut graph = petgraph::Graph::new();
+    let mut node_indices = Vec::with_capacity(n);
+    let mut path_to_node = HashMap::with_capacity(n);
+
+    for (i, info) in files.iter().enumerate() {
+        let node = graph.add_node(i);
+        node_indices.push(node);
+        path_to_node.insert(info.path.clone(), node);
     }
-}
 
-fn detect_cyclic_nodes(adj: &[Vec<bool>]) -> Vec<bool> {
-    let n = adj.len();
-    let mut visited = vec![false; n];
-    let mut rec_stack = vec![false; n];
-    let mut in_cycle = vec![false; n];
+    for (i, info) in files.iter().enumerate() {
+        let _imports: Vec<String> = info.path
+            .split('/')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect();
 
-    fn dfs(
-        node: usize,
-        adj: &[Vec<bool>],
-        visited: &mut [bool],
-        rec_stack: &mut [bool],
-        in_cycle: &mut [bool],
-    ) -> bool {
-        visited[node] = true;
-        rec_stack[node] = true;
-
-        for (next, &is_edge) in adj[node].iter().enumerate() {
-            if is_edge {
-                if !visited[next] && dfs(next, adj, visited, rec_stack, in_cycle) {
-                    in_cycle[node] = true;
-                    return true;
-                } else if rec_stack[next] {
-                    in_cycle[node] = true;
-                    in_cycle[next] = true;
-                    return true;
+        for (j, other_info) in files.iter().enumerate() {
+            if i != j {
+                let other_stem = Path::new(&other_info.path)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("");
+                if info.path.contains(other_stem) {
+                    graph.add_edge(node_indices[i], node_indices[j], ());
                 }
             }
         }
-
-        rec_stack[node] = false;
-        false
     }
 
-    for i in 0..n {
-        if !visited[i] {
-            dfs(i, adj, &mut visited, &mut rec_stack, &mut in_cycle);
+    let cycles = petgraph::algo::tarjan_scc(&graph);
+    let mut in_cycle_set = HashSet::new();
+
+    for component in cycles {
+        if component.len() > 1 {
+            for &node in &component {
+                let idx = graph[node];
+                in_cycle_set.insert(idx);
+            }
         }
     }
 
-    in_cycle
+    for i in 0..n {
+        files[i].in_cycle = in_cycle_set.contains(&i);
+    }
 }
 
 fn is_test_file(path: &str, content: &str) -> bool {

@@ -16,6 +16,9 @@ name = "cell_core"
 path = "src/lib.rs"
 
 [dependencies]
+rayon = "1"
+lazy_static = "1"
+difflib = "0.4"
 clap = { version = "4", features = ["derive", "cargo", "wrap_help"] }
 clap_complete = "4"
 serde = { version = "1", features = ["derive"] }

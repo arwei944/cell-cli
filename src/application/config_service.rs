@@ -89,6 +89,14 @@ pub struct EntropyConfig {
     pub critical_threshold: f64,
     #[serde(default = "default_entropy_history")]
     pub keep_history_days: u32,
+    #[serde(default)]
+    pub dimension_weights: DimensionWeightsConfig,
+    #[serde(default)]
+    pub dimension_thresholds: DimensionThresholdsConfig,
+    #[serde(default)]
+    pub exclude_paths: Vec<String>,
+    #[serde(default)]
+    pub complexity: ComplexityThresholdsConfig,
 }
 
 impl Default for EntropyConfig {
@@ -97,6 +105,10 @@ impl Default for EntropyConfig {
             warning_threshold: default_entropy_threshold(),
             critical_threshold: default_entropy_critical(),
             keep_history_days: default_entropy_history(),
+            dimension_weights: DimensionWeightsConfig::default(),
+            dimension_thresholds: DimensionThresholdsConfig::default(),
+            exclude_paths: Vec::new(),
+            complexity: ComplexityThresholdsConfig::default(),
         }
     }
 }
@@ -112,6 +124,97 @@ fn default_entropy_critical() -> f64 {
 fn default_entropy_history() -> u32 {
     90
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DimensionWeightsConfig {
+    #[serde(default = "default_structural_weight")]
+    pub structural: f64,
+    #[serde(default = "default_complexity_weight")]
+    pub complexity: f64,
+    #[serde(default = "default_coupling_weight")]
+    pub coupling: f64,
+    #[serde(default = "default_naming_weight")]
+    pub naming: f64,
+    #[serde(default = "default_test_weight")]
+    pub test: f64,
+}
+
+impl Default for DimensionWeightsConfig {
+    fn default() -> Self {
+        Self {
+            structural: default_structural_weight(),
+            complexity: default_complexity_weight(),
+            coupling: default_coupling_weight(),
+            naming: default_naming_weight(),
+            test: default_test_weight(),
+        }
+    }
+}
+
+fn default_structural_weight() -> f64 { 0.25 }
+fn default_complexity_weight() -> f64 { 0.25 }
+fn default_coupling_weight() -> f64 { 0.20 }
+fn default_naming_weight() -> f64 { 0.15 }
+fn default_test_weight() -> f64 { 0.15 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DimensionThresholdsConfig {
+    pub structural_warning: Option<f64>,
+    pub structural_critical: Option<f64>,
+    pub complexity_warning: Option<f64>,
+    pub complexity_critical: Option<f64>,
+    pub coupling_warning: Option<f64>,
+    pub coupling_critical: Option<f64>,
+    pub naming_warning: Option<f64>,
+    pub naming_critical: Option<f64>,
+    pub test_warning: Option<f64>,
+    pub test_critical: Option<f64>,
+}
+
+impl Default for DimensionThresholdsConfig {
+    fn default() -> Self {
+        Self {
+            structural_warning: None,
+            structural_critical: None,
+            complexity_warning: None,
+            complexity_critical: None,
+            coupling_warning: None,
+            coupling_critical: None,
+            naming_warning: None,
+            naming_critical: None,
+            test_warning: None,
+            test_critical: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComplexityThresholdsConfig {
+    #[serde(default = "default_entropy_max_function_lines")]
+    pub max_function_lines: usize,
+    #[serde(default = "default_entropy_max_file_lines")]
+    pub max_file_lines: usize,
+    #[serde(default = "default_entropy_max_nesting_depth")]
+    pub max_nesting_depth: usize,
+    #[serde(default = "default_entropy_max_cyclomatic_complexity")]
+    pub max_cyclomatic_complexity: usize,
+}
+
+impl Default for ComplexityThresholdsConfig {
+    fn default() -> Self {
+        Self {
+            max_function_lines: default_entropy_max_function_lines(),
+            max_file_lines: default_entropy_max_file_lines(),
+            max_nesting_depth: default_entropy_max_nesting_depth(),
+            max_cyclomatic_complexity: default_entropy_max_cyclomatic_complexity(),
+        }
+    }
+}
+
+fn default_entropy_max_nesting_depth() -> usize { 5 }
+fn default_entropy_max_cyclomatic_complexity() -> usize { 10 }
+fn default_entropy_max_function_lines() -> usize { 50 }
+fn default_entropy_max_file_lines() -> usize { 500 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QualityConfig {
@@ -134,6 +237,72 @@ impl Default for QualityConfig {
             max_cyclomatic_complexity: default_max_cyclomatic_complexity(),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct ConfigValidationResult {
+    pub valid: bool,
+    pub errors: Vec<String>,
+    pub warnings: Vec<String>,
+}
+
+impl CellConfig {
+    pub fn validate(&self) -> ConfigValidationResult {
+        let mut errors = Vec::new();
+        let mut warnings = Vec::new();
+
+        if self.project.name.is_empty() {
+            errors.push("project.name 不能为空".to_string());
+        }
+
+        if self.project.version.is_empty() {
+            errors.push("project.version 不能为空".to_string());
+        } else if !semver_like(&self.project.version) {
+            warnings.push("project.version 建议使用语义化版本格式 (如 0.1.0)".to_string());
+        }
+
+        if self.entropy.warning_threshold < 0.0 || self.entropy.warning_threshold > 1.0 {
+            errors.push("entropy.warning_threshold 必须在 0.0 到 1.0 之间".to_string());
+        }
+
+        if self.entropy.critical_threshold < 0.0 || self.entropy.critical_threshold > 1.0 {
+            errors.push("entropy.critical_threshold 必须在 0.0 到 1.0 之间".to_string());
+        }
+
+        if self.entropy.warning_threshold >= self.entropy.critical_threshold {
+            errors.push("entropy.warning_threshold 必须小于 entropy.critical_threshold".to_string());
+        }
+
+        if self.quality.min_test_coverage < 0.0 || self.quality.min_test_coverage > 100.0 {
+            errors.push("quality.min_test_coverage 必须在 0 到 100 之间".to_string());
+        }
+
+        if self.quality.max_file_lines == 0 {
+            errors.push("quality.max_file_lines 不能为 0".to_string());
+        }
+
+        if self.quality.max_function_lines == 0 {
+            errors.push("quality.max_function_lines 不能为 0".to_string());
+        }
+
+        if self.architecture.layers.is_empty() {
+            warnings.push("architecture.layers 为空，分层检查将被跳过".to_string());
+        }
+
+        ConfigValidationResult {
+            valid: errors.is_empty(),
+            errors,
+            warnings,
+        }
+    }
+}
+
+fn semver_like(version: &str) -> bool {
+    let parts: Vec<&str> = version.split('.').collect();
+    if parts.len() < 2 {
+        return false;
+    }
+    parts.iter().all(|p| p.chars().all(|c| c.is_ascii_digit()))
 }
 
 fn default_min_test_coverage() -> f64 {

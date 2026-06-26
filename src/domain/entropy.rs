@@ -124,6 +124,18 @@ pub struct EntropyDimensions {
     pub test: f64,
 }
 
+impl Default for EntropyDimensions {
+    fn default() -> Self {
+        Self {
+            structural: 0.0,
+            complexity: 0.0,
+            coupling: 0.0,
+            naming: 0.0,
+            test: 0.0,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DimensionWeights {
     pub structural: f64,
@@ -164,7 +176,21 @@ impl EntropyGrade {
             _ => EntropyGrade::Critical,
         }
     }
+}
 
+impl std::fmt::Display for EntropyGrade {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EntropyGrade::Healthy => write!(f, "Healthy"),
+            EntropyGrade::Notice => write!(f, "Notice"),
+            EntropyGrade::Warning => write!(f, "Warning"),
+            EntropyGrade::Danger => write!(f, "Danger"),
+            EntropyGrade::Critical => write!(f, "Critical"),
+        }
+    }
+}
+
+impl EntropyGrade {
     pub fn label(&self) -> &str {
         match self {
             EntropyGrade::Healthy => "健康",
@@ -888,5 +914,380 @@ fn good_name() {
             max_nesting_depth: 5,
         };
         assert!(is_high_risk_file(&file));
+    }
+
+    #[test]
+    fn test_is_not_high_risk_file() {
+        let file = FileEntropy {
+            path: "small.rs".to_string(),
+            lines: 50,
+            complexity_score: 10.0,
+            structural_score: 10.0,
+            naming_score: 10.0,
+            function_count: 2,
+            max_nesting_depth: 2,
+        };
+        assert!(!is_high_risk_file(&file));
+    }
+
+    #[test]
+    fn test_entropy_grade_boundaries() {
+        assert_eq!(EntropyGrade::from_score(0.0), EntropyGrade::Healthy);
+        assert_eq!(EntropyGrade::from_score(19.9), EntropyGrade::Healthy);
+        assert_eq!(EntropyGrade::from_score(20.0), EntropyGrade::Notice);
+        assert_eq!(EntropyGrade::from_score(39.9), EntropyGrade::Notice);
+        assert_eq!(EntropyGrade::from_score(40.0), EntropyGrade::Warning);
+        assert_eq!(EntropyGrade::from_score(59.9), EntropyGrade::Warning);
+        assert_eq!(EntropyGrade::from_score(60.0), EntropyGrade::Danger);
+        assert_eq!(EntropyGrade::from_score(79.9), EntropyGrade::Danger);
+        assert_eq!(EntropyGrade::from_score(80.0), EntropyGrade::Critical);
+        assert_eq!(EntropyGrade::from_score(100.0), EntropyGrade::Critical);
+    }
+
+    #[test]
+    fn test_entropy_grade_display() {
+        assert_eq!(EntropyGrade::Healthy.label(), "健康");
+        assert_eq!(EntropyGrade::Notice.label(), "注意");
+        assert_eq!(EntropyGrade::Warning.label(), "警告");
+        assert_eq!(EntropyGrade::Danger.label(), "危险");
+        assert_eq!(EntropyGrade::Critical.label(), "灾难");
+    }
+
+    #[test]
+    fn test_dimension_weights_default() {
+        let weights = DimensionWeights::default();
+        let total = weights.structural + weights.complexity + weights.coupling + weights.naming + weights.test;
+        assert!((total - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_structural_entropy() {
+        let code = "fn a() {} fn b() {} fn c() {}";
+        let info = calculate_structural_for_file(code, "test.rs", 10);
+        assert!(info.function_count >= 1);
+        assert!(info.score >= 0.0);
+        assert!(info.score <= 100.0);
+    }
+
+    #[test]
+    fn test_cyclomatic_complexity_calculation() {
+        let simple = "fn x() { 1 }";
+        let complex = "fn x() { if true { if false { for i in 0..10 { match i { 0 => (), _ => () } } } } }";
+        let (_, simple_info, _, _) = build_file_metrics("simple.rs", simple);
+        let (_, complex_info, _, _) = build_file_metrics("complex.rs", complex);
+        assert!(complex_info.cyclomatic_complexity >= simple_info.cyclomatic_complexity);
+    }
+
+    #[test]
+    fn test_coupling_with_no_dependencies() {
+        let files = vec![
+            FileCouplingInfo { path: "a.rs".to_string(), incoming: 0, outgoing: 0, cross_layer: false, in_cycle: false },
+        ];
+        let score = calculate_coupling(&files);
+        assert!(score >= 0.0);
+    }
+
+    #[test]
+    fn test_test_entropy_with_tests() {
+        let files = vec![
+            TestFileInfo { path: "code.rs".to_string(), code_lines: 100, test_lines: 0, test_count: 0, assertion_count: 0, is_test_file: false },
+            TestFileInfo { path: "code_test.rs".to_string(), code_lines: 0, test_lines: 50, test_count: 5, assertion_count: 10, is_test_file: true },
+        ];
+        let score = calculate_test_entropy(&files);
+        assert!(score >= 0.0);
+        assert!(score <= 100.0);
+    }
+
+    #[test]
+    fn test_entropy_dimensions_default() {
+        let dims = EntropyDimensions::default();
+        assert_eq!(dims.structural, 0.0);
+        assert_eq!(dims.complexity, 0.0);
+        assert_eq!(dims.coupling, 0.0);
+        assert_eq!(dims.naming, 0.0);
+        assert_eq!(dims.test, 0.0);
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CellEntropyReport {
+    pub cell_name: String,
+    pub overall_score: f64,
+    pub dimensions: EntropyDimensions,
+    pub grade: EntropyGrade,
+    pub file_count: usize,
+    pub line_count: usize,
+    pub calculated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemEntropyReport {
+    pub system_name: String,
+    pub overall_score: f64,
+    pub dimensions: EntropyDimensions,
+    pub grade: EntropyGrade,
+    pub cells: Vec<CellEntropyReport>,
+    pub cross_cell_coupling: f64,
+    pub calculated_at: String,
+}
+
+impl SystemEntropyReport {
+    pub fn new(system_name: impl Into<String>) -> Self {
+        Self {
+            system_name: system_name.into(),
+            overall_score: 0.0,
+            dimensions: EntropyDimensions::default(),
+            grade: EntropyGrade::Healthy,
+            cells: Vec::new(),
+            cross_cell_coupling: 0.0,
+            calculated_at: chrono::Utc::now().to_rfc3339(),
+        }
+    }
+
+    pub fn add_cell(&mut self, report: CellEntropyReport) {
+        self.cells.push(report);
+        self.recalculate();
+    }
+
+    fn recalculate(&mut self) {
+        if self.cells.is_empty() {
+            return;
+        }
+
+        let total_lines: usize = self.cells.iter().map(|c| c.line_count).sum();
+        if total_lines == 0 {
+            return;
+        }
+
+        let mut weighted = EntropyDimensions::default();
+        let mut weighted_overall = 0.0;
+
+        for cell in &self.cells {
+            let weight = cell.line_count as f64 / total_lines as f64;
+            weighted.structural += cell.dimensions.structural * weight;
+            weighted.complexity += cell.dimensions.complexity * weight;
+            weighted.coupling += cell.dimensions.coupling * weight;
+            weighted.naming += cell.dimensions.naming * weight;
+            weighted.test += cell.dimensions.test * weight;
+            weighted_overall += cell.overall_score * weight;
+        }
+
+        let coupling_penalty = self.calculate_cross_cell_coupling_penalty();
+        self.dimensions = weighted;
+        self.dimensions.coupling += coupling_penalty;
+        self.dimensions.coupling = self.dimensions.coupling.min(100.0);
+
+        let weights = DimensionWeights::default();
+        self.overall_score = calculate_overall_score(&self.dimensions, &weights);
+        self.grade = EntropyGrade::from_score(self.overall_score);
+        self.calculated_at = chrono::Utc::now().to_rfc3339();
+
+        let _ = weighted_overall;
+    }
+
+    fn calculate_cross_cell_coupling_penalty(&self) -> f64 {
+        if self.cells.len() < 2 {
+            return 0.0;
+        }
+
+        self.cross_cell_coupling * 0.5
+    }
+
+    pub fn highest_risk_cells(&self, n: usize) -> Vec<&CellEntropyReport> {
+        let mut sorted: Vec<&CellEntropyReport> = self.cells.iter().collect();
+        sorted.sort_by(|a, b| b.overall_score.partial_cmp(&a.overall_score).unwrap_or(std::cmp::Ordering::Equal));
+        sorted.into_iter().take(n).collect()
+    }
+
+    pub fn improvement_suggestions(&self) -> Vec<String> {
+        let mut suggestions = Vec::new();
+
+        if self.dimensions.structural > 70.0 {
+            suggestions.push("系统结构熵过高，建议拆分大型模块".to_string());
+        }
+        if self.dimensions.complexity > 70.0 {
+            suggestions.push("系统复杂度熵过高，建议简化核心业务逻辑".to_string());
+        }
+        if self.cross_cell_coupling > 50.0 {
+            suggestions.push("跨 Cell 耦合度过高，建议重新划分服务边界".to_string());
+        }
+        if self.dimensions.test < 30.0 {
+            suggestions.push("系统测试覆盖率不足，建议补充关键路径测试".to_string());
+        }
+
+        let high_risk = self.highest_risk_cells(3);
+        for cell in &high_risk {
+            if cell.overall_score > 60.0 {
+                suggestions.push(format!(
+                    "高风险 Cell: '{}' 熵值 {:.1} ({}), 建议优先治理",
+                    cell.cell_name, cell.overall_score, cell.grade.label()
+                ));
+            }
+        }
+
+        if suggestions.is_empty() {
+            suggestions.push("系统熵值健康，继续保持".to_string());
+        }
+
+        suggestions
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CouplingEdge {
+    pub from_cell: String,
+    pub to_cell: String,
+    pub dependency_count: usize,
+    pub coupling_strength: f64,
+    pub dependency_types: Vec<String>,
+}
+
+impl CouplingEdge {
+    pub fn new(from: impl Into<String>, to: impl Into<String>) -> Self {
+        Self {
+            from_cell: from.into(),
+            to_cell: to.into(),
+            dependency_count: 0,
+            coupling_strength: 0.0,
+            dependency_types: Vec::new(),
+        }
+    }
+
+    pub fn add_dependency(&mut self, dep_type: &str) {
+        self.dependency_count += 1;
+        if !self.dependency_types.iter().any(|t| t == dep_type) {
+            self.dependency_types.push(dep_type.to_string());
+        }
+        self.coupling_strength = self.calculate_strength();
+    }
+
+    fn calculate_strength(&self) -> f64 {
+        let base = self.dependency_count as f64 * 5.0;
+        let type_factor = self.dependency_types.len() as f64 * 3.0;
+        (base + type_factor).min(100.0)
+    }
+}
+
+pub fn calculate_cross_cell_coupling(edges: &[CouplingEdge], cell_count: usize) -> f64 {
+    if cell_count < 2 || edges.is_empty() {
+        return 0.0;
+    }
+
+    let total_strength: f64 = edges.iter().map(|e| e.coupling_strength).sum();
+    let max_possible_edges = cell_count * (cell_count - 1);
+    let avg_strength = total_strength / max_possible_edges as f64;
+
+    avg_strength.min(100.0)
+}
+
+#[cfg(test)]
+mod system_entropy_tests {
+    use super::*;
+
+    fn create_cell_report(name: &str, score: f64, lines: usize) -> CellEntropyReport {
+        CellEntropyReport {
+            cell_name: name.to_string(),
+            overall_score: score,
+            dimensions: EntropyDimensions {
+                structural: score * 0.8,
+                complexity: score * 0.9,
+                coupling: score * 0.7,
+                naming: score * 0.6,
+                test: 100.0 - score * 0.5,
+            },
+            grade: EntropyGrade::from_score(score),
+            file_count: lines / 100,
+            line_count: lines,
+            calculated_at: chrono::Utc::now().to_rfc3339(),
+        }
+    }
+
+    #[test]
+    fn test_system_report_empty() {
+        let report = SystemEntropyReport::new("TestSystem");
+        assert_eq!(report.cells.len(), 0);
+        assert_eq!(report.overall_score, 0.0);
+    }
+
+    #[test]
+    fn test_system_report_single_cell() {
+        let mut report = SystemEntropyReport::new("TestSystem");
+        report.add_cell(create_cell_report("cell-a", 40.0, 1000));
+        assert_eq!(report.cells.len(), 1);
+        assert!(report.overall_score > 0.0);
+    }
+
+    #[test]
+    fn test_system_report_multiple_cells() {
+        let mut report = SystemEntropyReport::new("TestSystem");
+        report.add_cell(create_cell_report("cell-a", 30.0, 2000));
+        report.add_cell(create_cell_report("cell-b", 60.0, 1000));
+
+        assert_eq!(report.cells.len(), 2);
+        assert!(report.overall_score > 30.0);
+        assert!(report.overall_score < 60.0);
+    }
+
+    #[test]
+    fn test_highest_risk_cells() {
+        let mut report = SystemEntropyReport::new("TestSystem");
+        report.add_cell(create_cell_report("cell-low", 20.0, 1000));
+        report.add_cell(create_cell_report("cell-med", 50.0, 1000));
+        report.add_cell(create_cell_report("cell-high", 80.0, 1000));
+
+        let top2 = report.highest_risk_cells(2);
+        assert_eq!(top2.len(), 2);
+        assert_eq!(top2[0].cell_name, "cell-high");
+        assert_eq!(top2[1].cell_name, "cell-med");
+    }
+
+    #[test]
+    fn test_cross_cell_coupling() {
+        let mut edges = Vec::new();
+        let mut edge = CouplingEdge::new("cell-a", "cell-b");
+        edge.add_dependency("event");
+        edge.add_dependency("api");
+        edges.push(edge);
+
+        let coupling = calculate_cross_cell_coupling(&edges, 2);
+        assert!(coupling > 0.0);
+        assert!(coupling <= 100.0);
+    }
+
+    #[test]
+    fn test_coupling_edge() {
+        let mut edge = CouplingEdge::new("a", "b");
+        assert_eq!(edge.dependency_count, 0);
+        assert_eq!(edge.coupling_strength, 0.0);
+
+        edge.add_dependency("event");
+        assert_eq!(edge.dependency_count, 1);
+        assert!(edge.coupling_strength > 0.0);
+
+        edge.add_dependency("event");
+        assert_eq!(edge.dependency_count, 2);
+        assert_eq!(edge.dependency_types.len(), 1);
+    }
+
+    #[test]
+    fn test_improvement_suggestions() {
+        let mut report = SystemEntropyReport::new("TestSystem");
+        report.add_cell(create_cell_report("bad-cell", 85.0, 1000));
+        report.cross_cell_coupling = 60.0;
+        report.recalculate();
+
+        let suggestions = report.improvement_suggestions();
+        assert!(!suggestions.is_empty());
+    }
+
+    #[test]
+    fn test_system_report_with_coupling_penalty() {
+        let mut report = SystemEntropyReport::new("TestSystem");
+        report.add_cell(create_cell_report("cell-a", 30.0, 1000));
+        report.add_cell(create_cell_report("cell-b", 30.0, 1000));
+        report.cross_cell_coupling = 80.0;
+        report.recalculate();
+
+        assert!(report.dimensions.coupling > 30.0 * 0.7);
     }
 }

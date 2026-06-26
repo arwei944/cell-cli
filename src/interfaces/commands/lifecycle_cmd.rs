@@ -1,6 +1,8 @@
 use crate::adapters::file_decision_store::FileDecisionStore;
 use crate::adapters::file_handoff_exporter::FileHandoffExporter;
 use crate::adapters::file_progress_store::FileProgressStore;
+use crate::application::entropy_service::run_entropy_check;
+use crate::application::fast_verify_service::FastVerifyService;
 use crate::application::handoff_service::HandoffService;
 use crate::application::progress_bar::StepProgress;
 use crate::application::progress_service::ProgressService;
@@ -8,24 +10,95 @@ use crate::domain::errors::{CellError, CellResult};
 use crate::domain::progress::EventType;
 use crate::interfaces::cli::*;
 use std::path::Path;
+use std::process::Command;
+
+fn run_git_command(args: &[&str]) -> CellResult<String> {
+    let output = Command::new("git")
+        .args(args)
+        .output()
+        .map_err(|e| CellError::Config(format!("Git command failed: {}", e)))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(CellError::Config(format!("Git failed: {}", stderr)));
+    }
+
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+/// 使用 GitHub CLI 推送代码（避免凭证交互）
+fn push_with_gh(branch: &str) -> CellResult<()> {
+    // 使用 git push 配合 gh 的凭证助手
+    let output = Command::new("git")
+        .args(["push", "origin", branch])
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .output()
+        .map_err(|e| CellError::Config(format!("Git push failed: {}", e)))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(CellError::Config(format!("Git push failed: {}", stderr)));
+    }
+    Ok(())
+}
+
+/// 快速Git提交（只添加handoff目录）
+fn fast_git_commit(message: &str) -> CellResult<()> {
+    // 只添加 .handoff 目录
+    let add_output = Command::new("git")
+        .args(["add", ".handoff/"])
+        .output()
+        .map_err(|e| CellError::Config(format!("Git add failed: {}", e)))?;
+
+    if !add_output.status.success() {
+        let stderr = String::from_utf8_lossy(&add_output.stderr).trim().to_string();
+        return Err(CellError::Config(format!("Git add failed: {}", stderr)));
+    }
+
+    // 检查是否有变更需要提交
+    let status_output = Command::new("git")
+        .args(["status", "--porcelain", ".handoff/"])
+        .output()
+        .map_err(|e| CellError::Config(format!("Git status failed: {}", e)))?;
+
+    let status = String::from_utf8_lossy(&status_output.stdout).trim().to_string();
+
+    if status.is_empty() {
+        // 没有变更，跳过提交
+        return Ok(());
+    }
+
+    // 快速提交
+    let commit_output = Command::new("git")
+        .args(["commit", "-m", message, "--no-gpg-sign", "--no-verify"])
+        .output()
+        .map_err(|e| CellError::Config(format!("Git commit failed: {}", e)))?;
+
+    if !commit_output.status.success() {
+        let stderr = String::from_utf8_lossy(&commit_output.stderr).trim().to_string();
+        return Err(CellError::Config(format!("Git commit failed: {}", stderr)));
+    }
+
+    Ok(())
+}
 
 pub fn cmd_handoff(args: HandoffArgs) -> CellResult<()> {
     let exporter = FileHandoffExporter::new();
     let progress_store = FileProgressStore::new();
     let decision_store = FileDecisionStore::new();
-    let service = HandoffService::new(exporter, progress_store, decision_store);
+    let handoff_service = HandoffService::new(exporter, progress_store.clone(), decision_store);
 
     match args.sub {
         HandoffSub::Generate { name, output, author, no_md, no_json } => {
-            handle_handoff_generate(&service, name, output, author.as_deref(), no_md, no_json)?;
+            handle_handoff_generate(&handoff_service, name, output, author.as_deref(), no_md, no_json)?;
         }
         HandoffSub::Show { path } => {
             let pkg_path = path.unwrap_or_else(|| ".handoff/latest.json".to_string());
-            let pkg = service.import(&pkg_path)?;
+            let pkg = handoff_service.import(&pkg_path)?;
             println!("{}", pkg.to_markdown());
         }
         HandoffSub::Validate { path } => {
-            let mut pkg = service.import(&path)?;
+            let mut pkg = handoff_service.import(&path)?;
             let validation = pkg.validate();
             if validation.is_complete {
                 println!("✅ 交接包验证通过 - 可以直接接手");
@@ -42,12 +115,15 @@ pub fn cmd_handoff(args: HandoffArgs) -> CellResult<()> {
                 }
             }
         }
+        HandoffSub::Commit { message, author, quick, no_push } => {
+            handle_handoff_commit(&handoff_service, message, author.as_deref(), quick, no_push)?;
+        }
     }
     Ok(())
 }
 
 fn handle_handoff_generate(
-    service: &HandoffService<FileHandoffExporter, FileProgressStore, FileDecisionStore>,
+    handoff_service: &HandoffService<FileHandoffExporter, FileProgressStore, FileDecisionStore>,
     name: Option<String>,
     output: Option<String>,
     author: Option<&str>,
@@ -77,9 +153,9 @@ fn handle_handoff_generate(
     for _ in 0..8 { progress.start_next(); progress.complete_current(); }
     progress.start_next();
 
-    let pkg = service.generate(".", &project_name, author)?;
-    if !no_json { export_handoff(service, &pkg, &out_dir, &base_name, "json")?; }
-    if !no_md { export_handoff(service, &pkg, &out_dir, &base_name, "md")?; }
+    let pkg = handoff_service.generate(".", &project_name, author)?;
+    if !no_json { export_handoff(handoff_service, &pkg, &out_dir, &base_name, "json")?; }
+    if !no_md { export_handoff(handoff_service, &pkg, &out_dir, &base_name, "md")?; }
 
     progress.complete_current();
     progress.render_summary();
@@ -88,7 +164,7 @@ fn handle_handoff_generate(
 }
 
 fn export_handoff(
-    service: &HandoffService<FileHandoffExporter, FileProgressStore, FileDecisionStore>,
+    handoff_service: &HandoffService<FileHandoffExporter, FileProgressStore, FileDecisionStore>,
     pkg: &crate::domain::handoff::HandoffPackage,
     out_dir: &str,
     base_name: &str,
@@ -97,9 +173,9 @@ fn export_handoff(
     let path = Path::new(out_dir).join(format!("{}.{}", base_name, ext));
     let path_str = path.to_str().ok_or_else(|| CellError::Config(format!("Invalid {} path", ext)))?;
     if ext == "json" {
-        service.export_json(pkg, path_str)?;
+        handoff_service.export_json(pkg, path_str)?;
     } else {
-        service.export_markdown(pkg, path_str)?;
+        handoff_service.export_markdown(pkg, path_str)?;
     }
     Ok(())
 }
@@ -123,6 +199,87 @@ fn print_handoff_result(
         println!("\nℹ️  交接包有 {} 条警告:", pkg.validation.warnings.len());
         for w in &pkg.validation.warnings { println!("  - {}", w); }
     }
+}
+
+fn handle_handoff_commit(
+    handoff_service: &HandoffService<FileHandoffExporter, FileProgressStore, FileDecisionStore>,
+    message: Option<String>,
+    author: Option<&str>,
+    quick: bool,
+    no_push: bool,
+) -> CellResult<()> {
+    let steps = vec![
+        ("验证代码质量", "运行 cargo check / tests"),
+        ("检查架构熵值", "计算架构熵值基线"),
+        ("生成交接包", "创建 handoff JSON/Md"),
+        ("Git 提交", "提交代码和交接包"),
+        ("Git 推送", "推送到远程仓库"),
+    ];
+    let mut progress = StepProgress::new(steps);
+
+    progress.start_next();
+    let verify_service = FastVerifyService::new();
+    if quick {
+        let result = verify_service.quick_check(".")?;
+        if !result.passed {
+            progress.fail_current(&format!("快速验证失败"));
+            std::process::exit(1);
+        }
+    } else {
+        let result = verify_service.deep_check(".")?;
+        if !result.passed {
+            progress.fail_current(&format!("深度验证失败"));
+            std::process::exit(1);
+        }
+    }
+    progress.complete_current();
+
+    progress.start_next();
+    let report = run_entropy_check(".")?;
+    println!("   📊 熵值得分: {:.1} ({})", report.overall_score, report.grade.label());
+    if report.overall_score > 50.0 {
+        println!("   ⚠️  警告: 熵值高于阈值 (50.0)");
+    }
+    progress.complete_current();
+
+    progress.start_next();
+    let project_name = std::env::current_dir()
+        .ok()
+        .and_then(|p| p.file_name().and_then(|n| n.to_str().map(|s| s.to_string())))
+        .unwrap_or_else(|| "cell-project".to_string());
+    let pkg = handoff_service.generate(".", &project_name, author)?;
+    handoff_service.export_json(&pkg, ".handoff/latest.json")?;
+    handoff_service.export_markdown(&pkg, ".handoff/latest.md")?;
+    println!("   📄 交接包: .handoff/latest.json");
+    println!("   📝 交接文档: .handoff/latest.md");
+    progress.complete_current();
+
+    progress.start_next();
+    let commit_msg = message.unwrap_or_else(|| format!(
+        "chore: handoff commit - entropy={:.1}",
+        report.overall_score
+    ));
+
+    fast_git_commit(&commit_msg)?;
+    println!("   📦 提交成功: {}", commit_msg);
+    progress.complete_current();
+
+    if !no_push {
+        progress.start_next();
+        push_with_gh("master")?;
+        println!("   🚀 已推送到远程仓库");
+        progress.complete_current();
+    } else {
+        progress.skip_current();
+    }
+
+    progress.render_summary();
+    println!();
+    println!("🎉 无漂移交接完成！");
+    println!("   下一智能体可通过以下命令接手:");
+    println!("   cell handoff show .handoff/latest.json");
+    println!("   cell handoff validate .handoff/latest.json");
+    Ok(())
 }
 
 #[allow(clippy::too_many_lines)]

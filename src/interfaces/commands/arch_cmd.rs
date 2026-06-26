@@ -1,4 +1,8 @@
+use crate::application::arch_advisor::ArchitectureAdvisor;
+use crate::application::arch_fixer::ArchitectureFixer;
+use crate::application::arch_linter::ArchitectureLinter;
 use crate::application::arch_service::{ArchitectureRules, validate_architecture};
+use crate::application::arch_visualizer::{ArchitectureVisualizer, OutputFormat, VisualizationOptions};
 use crate::application::dependency_analyzer::DependencyAnalyzer;
 use crate::application::impact_analysis_service::ImpactAnalysisService;
 use crate::domain::errors::CellResult;
@@ -14,10 +18,66 @@ pub fn cmd_arch(args: ArchArgs) -> CellResult<()> {
             if !result.passed { std::process::exit(1); }
         }
         ArchSub::Visualize { output } => {
-            println!("arch visualize, output: {:?}", output);
+            let vis = ArchitectureVisualizer::new();
+            let options = VisualizationOptions {
+                output_format: OutputFormat::Mermaid,
+                include_violations: true,
+                include_stats: true,
+            };
+            let diagram = vis.visualize(".", options)?;
+            println!("{}", diagram);
+            
+            if let Some(out_path) = output {
+                std::fs::write(&out_path, &diagram)?;
+                println!("已输出到: {}", out_path);
+            }
         }
-        ArchSub::Lint { fix } => {
-            println!("arch lint, fix: {}", fix);
+        ArchSub::Lint { fix, deep: _deep, json } => {
+            if fix {
+                let fixer = ArchitectureFixer::new();
+                let result = fixer.fix(".", false)?;
+                println!("{}", fixer.format_result(&result));
+            } else {
+                let linter = ArchitectureLinter::new();
+                let result = linter.lint(std::path::Path::new("."));
+                
+                if json {
+                    println!("{}", serde_json::to_string_pretty(&result)?);
+                } else {
+                    println!("{}", linter.format_result(&result));
+                }
+                
+                if result.error_count > 0 {
+                    std::process::exit(1);
+                }
+            }
+        }
+        ArchSub::Rules {} => {
+            let linter = ArchitectureLinter::new();
+            let rules = linter.list_rules();
+            
+            println!("\n📋 架构 Lint 规则列表\n{}", "─".repeat(50));
+            println!("  共 {} 条规则\n", rules.len());
+            
+            let mut current_cat = String::new();
+            for rule in rules {
+                let cat = format!("{:?}", rule.category);
+                if cat != current_cat {
+                    println!("\n  📂 {}:", cat);
+                    current_cat = cat;
+                }
+                
+                let icon = if rule.enabled { "✅" } else { "⚪" };
+                let sev = match rule.severity {
+                    crate::application::arch_linter::LintSeverity::Error => "🔴 Error",
+                    crate::application::arch_linter::LintSeverity::Warning => "🟡 Warning",
+                    crate::application::arch_linter::LintSeverity::Info => "🟢 Info",
+                };
+                
+                println!("    {} [{}] {} - {} ({})", 
+                    icon, rule.id, rule.name, rule.description, sev);
+            }
+            println!("\n{}", "─".repeat(50));
         }
         ArchSub::Overview {} => {
             let analyzer = DependencyAnalyzer::new(".");
@@ -37,7 +97,9 @@ pub fn cmd_arch(args: ArchArgs) -> CellResult<()> {
             println!("{}", service.format_report(&analysis));
         }
         ArchSub::Advise {} => {
-            println!("arch advise");
+            let advisor = ArchitectureAdvisor::new();
+            let result = advisor.advise(".")?;
+            println!("{}", advisor.format_result(&result));
         }
     }
     Ok(())

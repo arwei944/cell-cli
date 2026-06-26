@@ -1,5 +1,6 @@
 use crate::adapters::template_engine::TemplateEngine;
-use crate::application::generate_service::GenerateService;
+use crate::application::arch_linter::{ArchitectureLinter, LintResult};
+use crate::application::generate_service::{GenerateOptions, GenerateService};
 use crate::application::init_service::{InitInput, run_init};
 use crate::domain::cell_spec::{AdapterKind, PortKind};
 use crate::domain::errors::{CellError, CellResult};
@@ -22,7 +23,11 @@ pub fn cmd_init(args: InitArgs) -> CellResult<()> {
 
 pub fn cmd_generate(args: GenerateArgs) -> CellResult<()> {
     let engine = TemplateEngine::new();
-    let service = GenerateService::new(engine);
+    let options = GenerateOptions {
+        telemetry: !args.no_telemetry,
+        cell_name: None,
+    };
+    let service = GenerateService::new(engine).with_options(options);
     match args.sub {
         GenerateSub::Cell { name, output, spec, force } => {
             let out = output.unwrap_or_else(|| ".".to_string());
@@ -50,13 +55,131 @@ pub fn cmd_generate(args: GenerateArgs) -> CellResult<()> {
             let file = service.generate_adapter(&name, adapter_kind, &port_name, &out)?;
             println!("Generated adapter: {}", file);
         }
+        GenerateSub::Entity { name, fields, output } => {
+            let out = output.unwrap_or_else(|| ".".to_string());
+            let file = service.generate_entity(&name, fields.as_deref(), &out)?;
+            println!("Generated entity: {}", file);
+        }
+        GenerateSub::ValueObject { name, fields, output } => {
+            let out = output.unwrap_or_else(|| ".".to_string());
+            let file = service.generate_value_object(&name, fields.as_deref(), &out)?;
+            println!("Generated value object: {}", file);
+        }
+        GenerateSub::Aggregate { name, output } => {
+            let out = output.unwrap_or_else(|| ".".to_string());
+            let file = service.generate_aggregate(&name, &out)?;
+            println!("Generated aggregate: {}", file);
+        }
+        GenerateSub::DomainEvent { name, fields, output } => {
+            let out = output.unwrap_or_else(|| ".".to_string());
+            let file = service.generate_domain_event(&name, fields.as_deref(), &out)?;
+            println!("Generated domain event: {}", file);
+        }
+        GenerateSub::DomainService { name, output } => {
+            let out = output.unwrap_or_else(|| ".".to_string());
+            let file = service.generate_domain_service(&name, &out)?;
+            println!("Generated domain service: {}", file);
+        }
+        GenerateSub::Repository { name, entity, output } => {
+            let out = output.unwrap_or_else(|| ".".to_string());
+            let file = service.generate_repository(&name, &entity, &out)?;
+            println!("Generated repository: {}", file);
+        }
+        GenerateSub::Usecase { name, input, output, impl_, output_dir } => {
+            let out = output_dir.unwrap_or_else(|| ".".to_string());
+            let files = service.generate_usecase(&name, input.as_deref(), output.as_deref(), impl_, &out)?;
+            println!("Generated {} usecase files:", files.len());
+            for f in &files {
+                println!("  - {}", f);
+            }
+        }
+        GenerateSub::K8s { .. } | GenerateSub::Health { .. } => {
+            return Err(crate::domain::errors::CellError::Config(
+                "Use 'cell generate k8s' or 'cell generate health' via the new generate command".to_string()
+            ));
+        }
     }
     Ok(())
 }
 
-pub fn cmd_validate(_args: ValidateArgs) -> CellResult<()> {
-    println!("cell validate");
+pub fn cmd_validate(args: ValidateArgs) -> CellResult<()> {
+    let path = args.path.unwrap_or_else(|| ".".to_string());
+    let linter = ArchitectureLinter::new();
+    let result = linter.lint(Path::new(&path));
+
+    if args.json {
+        println!("{}", serde_json::to_string_pretty(&result)?);
+    } else {
+        print_validate_report(&result);
+    }
+
+    if result.error_count > 0 {
+        std::process::exit(1);
+    }
+
     Ok(())
+}
+
+fn print_validate_report(result: &LintResult) {
+    println!("\n{}", "=".repeat(60));
+    println!("  📐 Cell Architecture Validation Report");
+    println!("{}", "=".repeat(60));
+    
+    println!("\n  📁 Scanned files: {}", result.total_files);
+    println!("  📊 Total violations: {}", result.total_violations);
+    println!("     ❌ Errors:   {}", result.error_count);
+    println!("     ⚠️  Warnings: {}", result.warning_count);
+    println!("     ℹ️  Info:     {}", result.info_count);
+
+    if !result.by_category.is_empty() {
+        println!("\n  📂 By category:");
+        let mut cats: Vec<_> = result.by_category.iter().collect();
+        cats.sort_by_key(|(k, _)| (*k).clone());
+        for (cat, count) in cats {
+            println!("     {}: {}", cat, count);
+        }
+    }
+
+    if result.violations.is_empty() {
+        println!("\n  ✅ All checks passed! Architecture is healthy.");
+    } else {
+        println!("\n  🔍 Violations:");
+        println!("  {}", "─".repeat(56));
+        
+        let mut sorted = result.violations.clone();
+        sorted.sort_by(|a, b| {
+            let sev_order = |s: &crate::application::arch_linter::LintSeverity| match s {
+                crate::application::arch_linter::LintSeverity::Error => 0,
+                crate::application::arch_linter::LintSeverity::Warning => 1,
+                crate::application::arch_linter::LintSeverity::Info => 2,
+            };
+            sev_order(&a.severity).cmp(&sev_order(&b.severity))
+        });
+
+        for v in &sorted {
+            let icon = match v.severity {
+                crate::application::arch_linter::LintSeverity::Error => "❌",
+                crate::application::arch_linter::LintSeverity::Warning => "⚠️ ",
+                crate::application::arch_linter::LintSeverity::Info => "ℹ️ ",
+            };
+            println!("\n  {} [{}] {}:{}", icon, v.rule_id, v.file, v.line);
+            println!("     {}", v.message);
+            if let Some(sug) = &v.suggestion {
+                println!("     💡 Suggestion: {}", sug);
+            }
+        }
+    }
+
+    println!("\n{}", "=".repeat(60));
+    
+    if result.error_count > 0 {
+        println!("  ❌ VALIDATION FAILED - {} error(s)", result.error_count);
+    } else if result.warning_count > 0 {
+        println!("  ⚠️  PASSED with {} warning(s)", result.warning_count);
+    } else {
+        println!("  ✅ VALIDATION PASSED");
+    }
+    println!("{}\n", "=".repeat(60));
 }
 
 fn parse_port_kind(s: &str) -> CellResult<PortKind> {
