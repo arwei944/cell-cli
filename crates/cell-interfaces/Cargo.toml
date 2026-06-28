@@ -1,0 +1,40 @@
+[package]
+name = "cell-interfaces"
+version.workspace = true
+edition.workspace = true
+description = "Cell Architecture - Interfaces Layer (CLI, API, etc.)"
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lib]
+name = "cell_interfaces"
+path = "src/lib.rs"
+
+[dependencies]
+cell-domain = { workspace = true, features = ["serde"] }
+cell-application = { workspace = true }
+cell-adapters = { workspace = true }
+
+clap = { workspace = true }
+clap_complete = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+lazy_static = { workspace = true }
+walkdir = { workspace = true }
+toml = { workspace = true }
+indexmap = { workspace = true }
+petgraph = { workspace = true }
+tokio = { workspace = true }
+webbrowser = { workspace = true }
+
+[lints]
+workspace = true

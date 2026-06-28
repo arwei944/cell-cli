@@ -1,6 +1,6 @@
-use cell_core::domain::errors::CellResult;
-use cell_core::interfaces::cli::*;
-use cell_core::interfaces::commands::*;
+use cell_domain::errors::CellResult;
+use cell_interfaces::cli::{Cli, Command};
+use cell_interfaces::commands::{init_cmd, generate_cmd, entropy_cmd, feature_cmd, diagnose_cmd, event_cmd, lifecycle_cmd, evolve_cmd, arch_cmd, adr_cmd, decision_cmd, dev_cmd, quality_cmd, dev_workflow_cmd, template_cmd, git_cmd, project_cmd, bench_cmd, review_cmd, workflow_cmd, ws_cmd, agent_cmd, canary_cmd, docs_cmd, env_cmd, db_cmd, enforcement_cmd, task_cmd, self_verify_cmd, decide_cmd, tool_policy_cmd, audit_cmd, agent_profile_cmd, self_heal_cmd, mesh_cmd, sandbox_cmd, plugin_cmd, plugin_validator_cmd, ab_cmd, pattern_cmd, rca_cmd, rule_cmd, refactor_cmd, saga_cmd, contract_cmd, entropy_bank_cmd, complexity_quota_cmd};
 use clap::Parser;
 
 fn main() -> CellResult<()> {

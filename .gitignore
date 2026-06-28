@@ -30,3 +30,7 @@ logs/
 # Backup
 *.bak
 *.backup
+
+# Mutation testing output
+mutants.out/
+*.mutants

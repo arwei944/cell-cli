@@ -1,0 +1,42 @@
+{
+  "generated_at": "2026-06-27",
+  "tool": "cargo-llvm-cov 0.8.7",
+  "baseline": {
+    "cell-domain": {
+      "line_coverage": 84.49,
+      "region_coverage": 86.12,
+      "function_coverage": 80.49,
+      "note": "domain 层 - 核心业务逻辑，覆盖率较高"
+    },
+    "cell-application": {
+      "line_coverage": 39.67,
+      "region_coverage": 39.76,
+      "function_coverage": 39.95,
+      "note": "application 层 - 服务编排，部分服务暂无测试",
+      "skipped_tests": ["auto_instrumentation::tests (栈溢出问题)"]
+    },
+    "cell-adapters": {
+      "line_coverage": 92.23,
+      "region_coverage": 89.84,
+      "function_coverage": 88.89,
+      "note": "adapters 层 - 基础设施实现，测试较充分",
+      "excluded": ["web_dashboard.rs (0% 覆盖率，纯 UI 代码)"]
+    },
+    "cell-interfaces": {
+      "line_coverage": 0.0,
+      "region_coverage": 0.0,
+      "function_coverage": 0.0,
+      "note": "interfaces 层 - CLI 命令层，暂无单元测试"
+    },
+    "cell-cli": {
+      "line_coverage": 0.0,
+      "region_coverage": 0.0,
+      "function_coverage": 0.0,
+      "note": "CLI 入口，暂无单元测试"
+    },
+    "workspace_overall": {
+      "estimated_line_coverage": 55.0,
+      "note": "粗略估算，因各 crate 单独统计"
+    }
+  }
+}

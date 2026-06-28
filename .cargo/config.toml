@@ -1,0 +1,3 @@
+[alias]
+arch-lint = "test --package cell-application architecture_tests --lib"
+lint-arch = "test --package cell-application architecture_tests --lib"

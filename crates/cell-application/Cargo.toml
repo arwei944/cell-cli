@@ -1,0 +1,38 @@
+[package]
+name = "cell-application"
+version.workspace = true
+edition.workspace = true
+description = "Cell Architecture - Application Layer (use cases + ports)"
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lib]
+name = "cell_application"
+path = "src/lib.rs"
+
+[dependencies]
+cell-domain = { workspace = true, features = ["serde", "serde_json"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+toml = { workspace = true }
+rayon = { workspace = true }
+walkdir = { workspace = true }
+indexmap = { workspace = true }
+petgraph = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+lazy_static = "1.4"
+difflib = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

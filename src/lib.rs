@@ -1,8 +1,8 @@
 #![cfg_attr(test, allow(clippy::unwrap_used))]
 
-pub mod adapters;
-pub mod application;
-pub mod domain;
-pub mod interfaces;
+pub use cell_domain::*;
+pub use cell_application::*;
+pub use cell_adapters::*;
+pub use cell_interfaces::*;
 
-pub use domain::errors::{CellError, CellResult};
+pub use cell_domain::errors::{CellError, CellResult};

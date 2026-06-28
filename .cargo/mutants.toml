@@ -1,0 +1,122 @@
+# cargo-mutants 配置文件
+# 变异测试框架配置 - S1-T005
+#
+# 快速开始:
+#   cargo mutants --list          # 列出所有变异点
+#   cargo mutants                 # 运行全部变异测试
+#   cargo mutants -p cell-domain  # 只测试 cell-domain
+#   cargo mutants --file "**/entropy.rs"  # 只测试 entropy.rs
+
+# ============================================================
+# 测试范围配置
+# ============================================================
+
+# 只检查这些文件（glob 模式）
+examine_globs = [
+    "crates/cell-domain/src/**/*.rs",
+    "crates/cell-application/src/**/*.rs",
+]
+
+# 排除这些文件
+exclude_globs = [
+    # 测试文件
+    "**/tests/**/*.rs",
+    "**/test_*.rs",
+    "**/*_test.rs",
+
+    # 架构测试文件
+    "crates/cell-application/src/architecture_tests/**/*.rs",
+
+    # 宏和派生（通常不需要变异测试）
+    "**/*.derive.rs",
+    "**/macros/**/*.rs",
+
+    # 生成的代码
+    "**/generated/**/*.rs",
+]
+
+# ============================================================
+# 超时与并发配置
+# ============================================================
+
+# 构建超时倍数（相对于基线构建时间）
+build_timeout_multiplier = 5.0
+
+# 测试超时倍数（相对于基线测试时间）
+timeout_multiplier = 3.0
+
+# 最小测试超时（秒）
+minimum_test_timeout = 120.0
+
+# ============================================================
+# 跳过配置
+# ============================================================
+
+# 跳过这些函数/宏的调用
+skip_calls = [
+    "println!",
+    "eprintln!",
+    "debug!",
+    "info!",
+    "warn!",
+    "error!",
+    "trace!",
+    "panic!",
+    "unreachable!",
+    "todo!",
+    "unimplemented!",
+    "format!",
+    "format_args!",
+    "write!",
+    "writeln!",
+]
+
+# 使用内置默认的 skip_calls
+skip_calls_defaults = true
+
+# ============================================================
+# 构建配置
+# ============================================================
+
+# 激活所有 feature
+all_features = false
+
+# Cargo 构建 profile
+profile = "test"
+
+# 传递额外的 cargo 参数
+additional_cargo_args = []
+
+# 传递额外的 cargo test 参数
+additional_cargo_test_args = []
+
+# ============================================================
+# 输出配置
+# ============================================================
+
+# 输出目录
+output = "mutants.out"
+
+# 测试工具: "cargo" 或 "nextest"
+test_tool = "cargo"
+
+# ============================================================
+# 错误值配置
+# ============================================================
+
+# 从返回 Result 的函数生成这些错误值
+error_values = [
+    "anyhow::anyhow!(\"mutant error\")",
+]
+
+# ============================================================
+# 其他
+# ============================================================
+
+# 复制 VCS 目录到构建目录
+copy_vcs = false
+
+# 限制 lints 以避免警告导致构建失败
+cap_lints = true
+
+

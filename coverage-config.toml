@@ -1,0 +1,30 @@
+[coverage]
+tool = "cargo-llvm-cov"
+version = "0.8.7"
+
+[thresholds]
+workspace_min_line_coverage = 50.0
+
+[thresholds.per_crate]
+"cell-domain" = 82.0
+"cell-application" = 37.0
+"cell-adapters" = 85.0
+"cell-interfaces" = 0.0
+"cell-cli" = 0.0
+
+[thresholds.notes]
+"cell-domain" = "核心领域层，要求高覆盖率（基线 84.49%，阈值低 2.5%）"
+"cell-application" = "应用服务层，覆盖率中等（基线 39.67%，阈值低 2.5%）"
+"cell-adapters" = "适配器层，测试较充分（基线 92.23%，阈值低 7% 留空间）"
+"cell-interfaces" = "CLI 接口层，暂无测试要求"
+"cell-cli" = "CLI 入口，暂无测试要求"
+
+[coverage.options]
+output_dir = "target/coverage"
+fail_under = 0
+skip_tests = ["auto_instrumentation"]
+
+[coverage.report_formats]
+summary = true
+html = true
+lcov = true

@@ -221,12 +221,59 @@ dependencies = [
 ]
 
 [[package]]
+name = "cell-adapters"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "cell-application",
+ "cell-domain",
+ "chrono",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "syn",
+ "tempfile",
+ "tokio",
+ "tower-http",
+ "tracing",
+]
+
+[[package]]
+name = "cell-application"
+version = "0.1.0"
+dependencies = [
+ "cell-domain",
+ "chrono",
+ "difflib",
+ "indexmap",
+ "lazy_static",
+ "petgraph",
+ "rayon",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "toml",
+ "tracing",
+ "uuid",
+ "walkdir",
+]
+
+[[package]]
 name = "cell-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
  "axum",
+ "cell-adapters",
+ "cell-application",
+ "cell-domain",
+ "cell-interfaces",
  "chrono",
  "clap",
  "clap_complete",
@@ -251,6 +298,54 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "uuid",
+ "walkdir",
+ "webbrowser",
+]
+
+[[package]]
+name = "cell-domain"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "difflib",
+ "indexmap",
+ "lazy_static",
+ "petgraph",
+ "proc-macro2",
+ "quote",
+ "rayon",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "syn",
+ "thiserror",
+ "toml",
+ "uuid",
+ "walkdir",
+]
+
+[[package]]
+name = "cell-interfaces"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cell-adapters",
+ "cell-application",
+ "cell-domain",
+ "chrono",
+ "clap",
+ "clap_complete",
+ "indexmap",
+ "lazy_static",
+ "petgraph",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "thiserror",
+ "tokio",
+ "toml",
+ "tracing",
  "uuid",
  "walkdir",
  "webbrowser",
